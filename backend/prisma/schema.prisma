@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------- ENUMS ----------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Unit {
+  KG
+  LBS
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum Category {
+  PUSH
+  PULL
+  LEGS
+  CORE
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  MACHINE
+  BODYWEIGHT
+  CABLE
+}
+
+// ---------------- MODELS ----------------
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  role     Role   @default(USER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile     UserProfile?
+  routines    Routine[]
+  workoutLogs WorkoutLog[]
+
+  @@index([email])
+}
+
+model UserProfile {
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  preferredUnit     Unit            @default(KG)
+  experienceLevel   ExperienceLevel @default(BEGINNER)
+  targetDaysPerWeek Int             @default(4)
+
+  // Keeping JSON for now
+  availableEquipment Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Exercise {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  category         Category
+  primaryMuscle    String
+  secondaryMuscles Json
+  equipment        Equipment
+
+  description  String?
+  instructions String?
+  videoUrl     String?
+
+  routineExercises RoutineExercise[]
+  workoutExercises WorkoutExercise[]
+
+  createdAt DateTime @default(now())
+}
+
+model Routine {
+  id     String @id @default(uuid())
+  userId String
+  name   String
+
+  description String?
+  isArchived  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exercises RoutineExercise[]
+  logs      WorkoutLog[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RoutineExercise {
+  id         String @id @default(uuid())
+  routineId  String
+  exerciseId String
+
+  order Int
+
+  targetSets Int
+
+  targetRepMin Int?
+  targetRepMax Int?
+
+  restSeconds Int?
+  notes       String?
+
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@unique([routineId, order])
+  @@index([routineId])
+  @@index([exerciseId])
+}
+
+model WorkoutLog {
+  id        String  @id @default(uuid())
+  userId    String
+  routineId String?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  durationSeconds Int?
+  notes           String?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine Routine? @relation(fields: [routineId], references: [id])
+
+  exercises WorkoutExercise[]
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model WorkoutExercise {
+  id String @id @default(uuid())
+
+  workoutLogId String
+  exerciseId   String
+
+  order Int
+
+  plannedSets   Int?
+  plannedRepMin Int?
+  plannedRepMax Int?
+
+  notes String?
+
+  workoutLog WorkoutLog @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exercise   Exercise   @relation(fields: [exerciseId], references: [id])
+
+  sets SetLog[]
+
+  @@unique([workoutLogId, order])
+  @@index([workoutLogId])
+  @@index([exerciseId])
+}
+
+model SetLog {
+  id String @id @default(uuid())
+
+  workoutExerciseId String
+
+  setNumber Int
+
+  weight Float
+
+  reps Int
+  rir             Int?
+  durationSeconds Int?
+
+  isCompleted Boolean @default(true)
+
+  notes String?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutExerciseId, setNumber])
+  @@index([workoutExerciseId])
+}
