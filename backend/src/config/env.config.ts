@@ -1,4 +1,13 @@
-import { IsNumber, IsEnum, IsString } from 'class-validator';
+import { plainToInstance, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Max,
+  Min,
+  validateSync,
+} from 'class-validator';
 
 enum Environment {
   Development = 'development',
@@ -8,20 +17,36 @@ enum Environment {
 
 class EnvConfig {
   @IsEnum(Environment)
+  @IsNotEmpty()
   NODE_ENV: Environment;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(65535)
   PORT: number;
 
   @IsString()
+  @IsNotEmpty()
   DATABASE_URL: string;
 }
 
 export function validateEnvConfig(config: Record<string, unknown>): EnvConfig {
-  const envConfig = new EnvConfig();
-  envConfig.NODE_ENV = config.NODE_ENV as Environment;
-  envConfig.PORT = Number(config.PORT);
-  envConfig.DATABASE_URL = config.DATABASE_URL as string;
+  const envConfig = plainToInstance(EnvConfig, config, {
+    enableImplicitConversion: true,
+  });
+
+  const errors = validateSync(envConfig, {
+    skipMissingProperties: false,
+  });
+
+  if (errors.length > 0) {
+    throw new Error(
+      `Invalid environment configuration: ${errors
+        .flatMap((error) => Object.values(error.constraints ?? {}))
+        .join(', ')}`,
+    );
+  }
 
   return envConfig;
 }
