@@ -3,6 +3,8 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  Matches,
+  MinLength,
   IsString,
   Max,
   Min,
@@ -29,12 +31,26 @@ class EnvConfig {
   @IsString()
   @IsNotEmpty()
   DATABASE_URL: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(32)
+  JWT_SECRET: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d+[smhd]?$/)
+  JWT_EXPIRES_IN: string;
 }
 
 export function validateEnvConfig(config: Record<string, unknown>): EnvConfig {
-  const envConfig = plainToInstance(EnvConfig, config, {
-    enableImplicitConversion: true,
-  });
+  const envConfig = plainToInstance(
+    EnvConfig,
+    { ...config },
+    {
+      enableImplicitConversion: true,
+    },
+  );
 
   const errors = validateSync(envConfig, {
     skipMissingProperties: false,
