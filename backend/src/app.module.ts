@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { ExercisesModule } from './exercises/exercises.module';
+import { RoutinesModule } from './routines/routines.module';
 
 @Module({
    imports: [
@@ -18,6 +19,7 @@ import { ExercisesModule } from './exercises/exercises.module';
       AuthModule,
       ProfileModule,
       ExercisesModule,
+      RoutinesModule,
    ],
    controllers: [AppController],
    providers: [AppService],
