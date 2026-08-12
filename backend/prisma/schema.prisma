@@ -93,6 +93,7 @@ model Exercise {
   description  String?
   instructions String?
   videoUrl     String?
+  imageUrl     String?
 
   routineExercises RoutineExercise[]
   workoutExercises WorkoutExercise[]
