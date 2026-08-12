@@ -8,6 +8,13 @@ datasource db {
 
 // ---------------- ENUMS ----------------
 
+enum FitnessGoal {
+  MUSCLE_GAIN
+  STRENGTH
+  WEIGHT_LOSS
+  GENERAL_FITNESS
+}
+
 enum Role {
   USER
   ADMIN
@@ -58,9 +65,14 @@ model User {
 }
 
 model UserProfile {
-  id                String          @id @default(uuid())
-  userId            String          @unique
-  preferredUnit     Unit            @default(KG)
+  id            String @id @default(uuid())
+  userId        String @unique
+  preferredUnit Unit   @default(KG)
+
+  height      Float?
+  weight      Float?
+  primaryGoal FitnessGoal @default(MUSCLE_GAIN)
+
   experienceLevel   ExperienceLevel @default(BEGINNER)
   targetDaysPerWeek Int             @default(4)
 
@@ -183,7 +195,7 @@ model SetLog {
 
   weight Float
 
-  reps Int
+  reps            Int
   rir             Int?
   durationSeconds Int?
 
