@@ -175,6 +175,8 @@ model WorkoutExercise {
   plannedRepMin Int?
   plannedRepMax Int?
 
+  restSeconds Int?
+
   notes String?
 
   workoutLog WorkoutLog @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)

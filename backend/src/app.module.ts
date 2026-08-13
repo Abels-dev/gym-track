@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { RoutinesModule } from './routines/routines.module';
+import { WorkoutLogsModule } from './workout-logs/workout-logs.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
    imports: [
@@ -20,6 +22,8 @@ import { RoutinesModule } from './routines/routines.module';
       ProfileModule,
       ExercisesModule,
       RoutinesModule,
+      WorkoutLogsModule,
+      AnalyticsModule,
    ],
    controllers: [AppController],
    providers: [AppService],
