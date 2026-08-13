@@ -41,6 +41,14 @@ class EnvConfig {
   @IsNotEmpty()
   @Matches(/^\d+[smhd]?$/)
   JWT_EXPIRES_IN: string;
+
+  @IsString()
+  @IsNotEmpty()
+  EMAIL: string;
+
+  @IsString()
+  @IsNotEmpty()
+  EMAIL_APP_PASSWORD: string;
 }
 
 export function validateEnvConfig(config: Record<string, unknown>): EnvConfig {

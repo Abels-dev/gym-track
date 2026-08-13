@@ -11,6 +11,9 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { EmailService } from '../email/email.service';
 import {
   AuthIdentity,
   AuthSession,
@@ -32,6 +35,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthSession> {
@@ -82,6 +86,64 @@ export class AuthService {
     }
 
     return this.createSession(user);
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const email = normalizeEmail(dto.email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    // For security, always return success message even if user doesn't exist
+    if (!user) {
+      return { message: 'If that email exists, a reset code was sent.' };
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordOtp: await bcrypt.hash(otp, SALT_ROUNDS),
+        resetPasswordExpires: expires,
+      },
+    });
+
+    await this.emailService.sendPasswordResetOtpEmail(user.email, otp);
+
+    return { message: 'If that email exists, a reset code was sent.' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const email = normalizeEmail(dto.email);
+    const user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user || !user.resetPasswordOtp || !user.resetPasswordExpires) {
+      throw new UnauthorizedException('Invalid or expired reset code');
+    }
+
+    if (user.resetPasswordExpires < new Date()) {
+      throw new UnauthorizedException('Reset code has expired');
+    }
+
+    const isValidOtp = await bcrypt.compare(dto.otp, user.resetPasswordOtp);
+    if (!isValidOtp) {
+      throw new UnauthorizedException('Invalid reset code');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordOtp: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    await this.emailService.sendPasswordResetSuccessEmail(user.email);
+
+    return { message: 'Password reset successful' };
   }
 
   async me(userId: string): Promise<AuthIdentity> {
