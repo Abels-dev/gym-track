@@ -10,6 +10,7 @@ export class ExercisesController {
 
   @Get()
   findAll(
+    @Query('search') search?: string,
     @Query('category') category?: Category,
     @Query('equipment') equipment?: Equipment,
     @Query('page') page?: string,
@@ -17,7 +18,7 @@ export class ExercisesController {
   ) {
     const pageNumber = page ? parseInt(page, 10) : 1;
     const limitNumber = limit ? parseInt(limit, 10) : 10;
-    return this.exercisesService.findAll(pageNumber, limitNumber, category, equipment);
+    return this.exercisesService.findAll(pageNumber, limitNumber, search, category, equipment);
   }
 
   @Get(':id')

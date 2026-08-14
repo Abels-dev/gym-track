@@ -6,8 +6,15 @@ import { Category, Equipment } from '@prisma/client';
 export class ExercisesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(page: number, limit: number, category?: Category, equipment?: Equipment) {
+  async findAll(page: number, limit: number, search?: string, category?: Category, equipment?: Equipment) {
     const whereClause: any = {};
+    
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search } },
+        { primaryMuscle: { contains: search } }
+      ];
+    }
     if (category) whereClause.category = category;
     if (equipment) whereClause.equipment = equipment;
 
