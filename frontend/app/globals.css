@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  /* Odit Light Theme - Warm Paper Aesthetic */
+  --background: #FAF9F6;
+  --foreground: #2C2724;
+  
+  --border: #E5E2DB;
+  --border-strong: #C4C0B6;
+  
+  --primary: #4A3F35;
+  --primary-foreground: #FAF9F6;
+  
+  --surface: #FFFFFF;
+  
+  /* Pastel Tags for Light Mode */
+  --tag-green-bg: #E2F1E8;
+  --tag-green-text: #2D5A3F;
+  --tag-blue-bg: #E0E8F5;
+  --tag-blue-text: #3A5B8C;
+  --tag-red-bg: #F8E5E5;
+  --tag-red-text: #8B3A3A;
+  --tag-yellow-bg: #FDF3DA;
+  --tag-yellow-text: #8F6B1E;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Odit Dark Theme - Warm Charcoal Aesthetic */
+    --background: #1C1A19;
+    --foreground: #E8E5E1;
+    
+    --border: #35322F;
+    --border-strong: #4F4A45;
+    
+    --primary: #D1CAC3;
+    --primary-foreground: #1C1A19;
+    
+    --surface: #252220;
+    
+    /* Darker, muted tags for Dark Mode */
+    --tag-green-bg: #1B3324;
+    --tag-green-text: #8ACFA7;
+    --tag-blue-bg: #19273C;
+    --tag-blue-text: #8AB4F8;
+    --tag-red-bg: #3B1B1B;
+    --tag-red-text: #F89494;
+    --tag-yellow-bg: #3A2C10;
+    --tag-yellow-text: #F3C469;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-surface: var(--surface);
+
+  --color-tag-green-bg: var(--tag-green-bg);
+  --color-tag-green-text: var(--tag-green-text);
+  --color-tag-blue-bg: var(--tag-blue-bg);
+  --color-tag-blue-text: var(--tag-blue-text);
+  --color-tag-red-bg: var(--tag-red-bg);
+  --color-tag-red-text: var(--tag-red-text);
+  --color-tag-yellow-bg: var(--tag-yellow-bg);
+  --color-tag-yellow-text: var(--tag-yellow-text);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
