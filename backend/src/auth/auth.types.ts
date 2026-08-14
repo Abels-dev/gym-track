@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 export interface AuthUser {
   id: string;
   email: string;
+  fullName: string | null;
   role: Role;
   profileComplete: boolean;
 }
@@ -10,6 +11,7 @@ export interface AuthUser {
 export interface AuthPrincipal {
   id: string;
   email: string;
+  fullName: string | null;
   role: Role;
 }
 
@@ -28,4 +30,5 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: Role;
+  fullName: string | null;
 }

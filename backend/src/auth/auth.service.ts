@@ -53,6 +53,7 @@ export class AuthService {
     try {
       const user = await this.prisma.user.create({
         data: {
+          fullName: dto.fullName,
           email,
           password: await bcrypt.hash(dto.password, SALT_ROUNDS),
         },
@@ -166,6 +167,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      fullName:user.fullName
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -187,6 +189,7 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      fullName: user.fullName,
       role: user.role,
       profileComplete: Boolean(user.profile),
     };
