@@ -158,11 +158,185 @@ export class WorkoutLogsService {
     });
   }
 
+  async addExerciseToWorkout(userId: string, workoutId: string, exerciseId: string) {
+    const workout = await this.prisma.workoutLog.findFirst({
+      where: { id: workoutId, userId, endedAt: null },
+      include: { exercises: true },
+    });
+
+    if (!workout) {
+      throw new NotFoundException('Active workout not found');
+    }
+
+    const order = workout.exercises.length;
+
+    return this.prisma.workoutExercise.create({
+      data: {
+        workoutLogId: workoutId,
+        exerciseId,
+        order,
+        sets: {
+          create: [
+            { setNumber: 1, weight: 0, reps: 0, isCompleted: false },
+          ],
+        },
+      },
+      include: {
+        exercise: true,
+        sets: { orderBy: { setNumber: 'asc' } },
+      },
+    });
+  }
+
+  async removeExerciseFromWorkout(userId: string, workoutExerciseId: string) {
+    const workoutExercise = await this.prisma.workoutExercise.findUnique({
+      where: { id: workoutExerciseId },
+      include: { workoutLog: true },
+    });
+
+    if (!workoutExercise || workoutExercise.workoutLog.userId !== userId || workoutExercise.workoutLog.endedAt !== null) {
+      throw new NotFoundException('Workout exercise not found or session ended');
+    }
+
+    return this.prisma.workoutExercise.delete({
+      where: { id: workoutExerciseId },
+    });
+  }
+
+  async addSetToExercise(userId: string, workoutExerciseId: string) {
+    const workoutExercise = await this.prisma.workoutExercise.findUnique({
+      where: { id: workoutExerciseId },
+      include: {
+        workoutLog: true,
+        sets: { orderBy: { setNumber: 'desc' }, take: 1 },
+      },
+    });
+
+    if (!workoutExercise || workoutExercise.workoutLog.userId !== userId || workoutExercise.workoutLog.endedAt !== null) {
+      throw new NotFoundException('Workout exercise not found or session ended');
+    }
+
+    const nextSetNumber = (workoutExercise.sets[0]?.setNumber || 0) + 1;
+    const lastWeight = workoutExercise.sets[0]?.weight || 0;
+    const lastReps = workoutExercise.sets[0]?.reps || 0;
+
+    return this.prisma.setLog.create({
+      data: {
+        workoutExerciseId,
+        setNumber: nextSetNumber,
+        weight: lastWeight,
+        reps: lastReps,
+        isCompleted: false,
+      },
+    });
+  }
+
+  async deleteSet(userId: string, setId: string) {
+    const set = await this.prisma.setLog.findUnique({
+      where: { id: setId },
+      include: {
+        workoutExercise: {
+          include: {
+            workoutLog: true,
+            sets: { orderBy: { setNumber: 'asc' } },
+          },
+        },
+      },
+    });
+
+    if (!set || set.workoutExercise.workoutLog.userId !== userId || set.workoutExercise.workoutLog.endedAt !== null) {
+      throw new NotFoundException('Set not found or session ended');
+    }
+
+    await this.prisma.setLog.delete({
+      where: { id: setId },
+    });
+
+    // Re-index remaining sets
+    const remainingSets = set.workoutExercise.sets.filter((s) => s.id !== setId);
+    for (let i = 0; i < remainingSets.length; i++) {
+      if (remainingSets[i].setNumber !== i + 1) {
+        await this.prisma.setLog.update({
+          where: { id: remainingSets[i].id },
+          data: { setNumber: i + 1 },
+        });
+      }
+    }
+
+    return { success: true };
+  }
+
+  async cancelWorkout(userId: string, workoutId: string) {
+    const workout = await this.prisma.workoutLog.findFirst({
+      where: { id: workoutId, userId },
+    });
+
+    if (!workout) {
+      throw new NotFoundException('Workout not found');
+    }
+
+    await this.prisma.workoutLog.delete({
+      where: { id: workoutId },
+    });
+
+    return { success: true };
+  }
+
+  async deleteWorkoutHistoryLog(userId: string, workoutId: string) {
+    const workout = await this.prisma.workoutLog.findFirst({
+      where: { id: workoutId, userId },
+    });
+
+    if (!workout) {
+      throw new NotFoundException('Workout not found');
+    }
+
+    await this.prisma.workoutLog.delete({
+      where: { id: workoutId },
+    });
+
+    return { success: true };
+  }
+
+  async getPreviousPerformance(userId: string, exerciseId: string) {
+    const prevWorkoutExercise = await this.prisma.workoutExercise.findFirst({
+      where: {
+        exerciseId,
+        workoutLog: {
+          userId,
+          endedAt: { not: null },
+        },
+      },
+      orderBy: {
+        workoutLog: {
+          startedAt: 'desc',
+        },
+      },
+      include: {
+        sets: {
+          where: { isCompleted: true },
+          orderBy: { setNumber: 'asc' },
+        },
+      },
+    });
+
+    if (!prevWorkoutExercise) {
+      return [];
+    }
+
+    return prevWorkoutExercise.sets.map((s) => ({
+      setNumber: s.setNumber,
+      weight: s.weight,
+      reps: s.reps,
+    }));
+  }
+
   async getWorkoutHistory(userId: string) {
     return this.prisma.workoutLog.findMany({
       where: { userId, endedAt: { not: null } },
       orderBy: { startedAt: 'desc' },
       include: {
+        routine: true,
         exercises: {
           include: {
             exercise: true,

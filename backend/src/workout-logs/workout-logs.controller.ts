@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { WorkoutLogsService } from './workout-logs.service';
 import { CreateWorkoutLogDto } from './dto/create-workout-log.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
@@ -26,9 +26,47 @@ export class WorkoutLogsController {
     return this.workoutLogsService.getWorkoutHistory(user.id);
   }
 
+  @Get('exercises/:exerciseId/previous-performance')
+  getPreviousPerformance(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('exerciseId') exerciseId: string,
+  ) {
+    return this.workoutLogsService.getPreviousPerformance(user.id, exerciseId);
+  }
+
+  @Delete(':id')
+  cancelWorkout(@CurrentUser() user: AuthPrincipal, @Param('id') id: string) {
+    return this.workoutLogsService.cancelWorkout(user.id, id);
+  }
+
   @Patch(':id/finish')
   finishWorkout(@CurrentUser() user: AuthPrincipal, @Param('id') id: string) {
     return this.workoutLogsService.finishWorkout(user.id, id);
+  }
+
+  @Post(':id/exercises')
+  addExercise(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('id') workoutId: string,
+    @Body('exerciseId') exerciseId: string,
+  ) {
+    return this.workoutLogsService.addExerciseToWorkout(user.id, workoutId, exerciseId);
+  }
+
+  @Delete('exercises/:workoutExerciseId')
+  removeExercise(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+  ) {
+    return this.workoutLogsService.removeExerciseFromWorkout(user.id, workoutExerciseId);
+  }
+
+  @Post('exercises/:workoutExerciseId/sets')
+  addSet(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+  ) {
+    return this.workoutLogsService.addSetToExercise(user.id, workoutExerciseId);
   }
 
   @Patch('sets/:setId')
@@ -38,5 +76,13 @@ export class WorkoutLogsController {
     @Body() dto: UpdateSetDto,
   ) {
     return this.workoutLogsService.updateSet(user.id, setId, dto);
+  }
+
+  @Delete('sets/:setId')
+  deleteSet(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('setId') setId: string,
+  ) {
+    return this.workoutLogsService.deleteSet(user.id, setId);
   }
 }

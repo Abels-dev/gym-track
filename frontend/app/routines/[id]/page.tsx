@@ -34,8 +34,25 @@ export default function RoutineDetailPage() {
     },
   });
 
+  const startWorkoutMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post("/workouts", {
+        routineId: routine.id,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+      router.push("/workout");
+    },
+  });
+
   const handleDelete = () => {
     deleteMutation.mutate();
+  };
+
+  const handleStartWorkout = () => {
+    startWorkoutMutation.mutate();
   };
 
   if (isLoading) return <PageLoader />;
@@ -117,9 +134,13 @@ export default function RoutineDetailPage() {
       </div>
 
       <div className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-20">
-        <button className="w-full flex items-center justify-center gap-2 py-4 bg-primary text-primary-foreground rounded-xl font-medium tracking-wide shadow-lg shadow-primary/25 hover:scale-[1.02] transition-transform">
+        <button
+          onClick={handleStartWorkout}
+          disabled={startWorkoutMutation.isPending}
+          className="w-full flex items-center justify-center gap-2 py-4 bg-primary text-primary-foreground rounded-xl font-medium tracking-wide shadow-lg shadow-primary/25 hover:scale-[1.02] transition-transform disabled:opacity-50"
+        >
           <Play size={18} fill="currentColor" />
-          Start Workout
+          <span>{startWorkoutMutation.isPending ? "Starting..." : "Start Workout"}</span>
         </button>
       </div>
 
