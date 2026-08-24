@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Timer,
   X,
@@ -14,72 +14,40 @@ import {
   Pause,
   CheckCircle2,
 } from "lucide-react";
-import { soundEffects } from "../../lib/audio";
+import { useRestTimerStore } from "../../store/restTimerStore";
 
-interface RestTimerProps {
-  initialSeconds: number;
-  onClose: () => void;
-}
-
-export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
-  const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+export function RestTimer() {
+  const {
+    isActive,
+    initialSeconds,
+    secondsLeft,
+    isPaused,
+    isMuted,
+    isMinimized,
+    stopTimer,
+    togglePause,
+    adjustTime,
+    toggleMute,
+    setMinimized,
+    tick,
+  } = useRestTimerStore();
 
   useEffect(() => {
-    setSecondsLeft(initialSeconds);
-    setIsPaused(false);
-  }, [initialSeconds]);
-
-  useEffect(() => {
-    if (isPaused || secondsLeft <= 0) return;
+    if (!isActive) return;
 
     const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        const next = prev - 1;
-
-        // Audio countdown chimes
-        if (!isMuted) {
-          if (next >= 1 && next <= 3) {
-            soundEffects.playTick();
-          } else if (next === 0) {
-            soundEffects.playCompletion();
-          }
-        }
-
-        // Haptic feedback on complete
-        if (next === 0) {
-          clearInterval(interval);
-          if (
-            typeof window !== "undefined" &&
-            "navigator" in window &&
-            navigator.vibrate
-          ) {
-            try {
-              navigator.vibrate([200, 100, 200]);
-            } catch {
-              // ignore vibration error
-            }
-          }
-          return 0;
-        }
-
-        return next;
-      });
-    }, 1000);
+      tick();
+    }, 250);
 
     return () => clearInterval(interval);
-  }, [isPaused, secondsLeft, isMuted]);
+  }, [isActive, tick]);
+
+  if (!isActive) return null;
 
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const adjustTime = (delta: number) => {
-    setSecondsLeft((prev) => Math.max(0, prev + delta));
   };
 
   const progressPercent = Math.min(
@@ -92,7 +60,7 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
   // -------------------------------------------------------------
   if (isMinimized) {
     return (
-      <div className="fixed bottom-24 md:bottom-8 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <div className="fixed bottom-20 md:bottom-6 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
         <div
           className={`flex items-center gap-2.5 px-4 py-2.5 bg-surface/95 backdrop-blur-md border shadow-xl rounded-full transition-all ${
             secondsLeft === 0
@@ -101,7 +69,7 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
           }`}
         >
           <button
-            onClick={() => setIsMinimized(false)}
+            onClick={() => setMinimized(false)}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             title="Expand timer"
           >
@@ -122,7 +90,7 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
           </button>
 
           <button
-            onClick={() => setIsMinimized(false)}
+            onClick={() => setMinimized(false)}
             title="Expand timer"
             className="p-1 text-foreground/50 hover:text-foreground hover:bg-border/30 rounded-full transition-colors"
           >
@@ -130,7 +98,7 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
           </button>
 
           <button
-            onClick={onClose}
+            onClick={stopTimer}
             title="Dismiss"
             className="p-1 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-full transition-colors"
           >
@@ -145,11 +113,11 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
   // VIEW 2: EXPANDED FULL REST TIMER CARD
   // -------------------------------------------------------------
   return (
-    <div className="fixed bottom-24 md:bottom-8 right-4 left-4 md:left-auto md:w-96 bg-surface/95 backdrop-blur-md border border-border shadow-2xl rounded-2xl p-4 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+    <div className="fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto md:w-96 bg-surface/95 backdrop-blur-md border border-border shadow-2xl rounded-2xl p-4 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
       {/* Progress Bar */}
       <div className="w-full bg-border/40 h-1 rounded-full overflow-hidden mb-3">
         <div
-          className={`h-full transition-all duration-1000 ease-linear ${
+          className={`h-full transition-all duration-300 ease-linear ${
             secondsLeft === 0 ? "bg-tag-green-text" : "bg-primary"
           }`}
           style={{ width: `${progressPercent}%` }}
@@ -197,14 +165,14 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
             <Plus size={14} />
           </button>
           <button
-            onClick={() => setIsPaused((p) => !p)}
+            onClick={togglePause}
             title={isPaused ? "Resume timer" : "Pause timer"}
             className="p-2 bg-background hover:bg-border/40 border border-border rounded-xl text-xs font-medium transition-colors opacity-80 hover:opacity-100"
           >
             {isPaused ? <Play size={14} fill="currentColor" /> : <Pause size={14} />}
           </button>
           <button
-            onClick={() => setIsMuted((m) => !m)}
+            onClick={toggleMute}
             title={isMuted ? "Unmute countdown sound" : "Mute countdown sound"}
             className={`p-2 bg-background border border-border rounded-xl text-xs font-medium transition-colors ${
               isMuted
@@ -215,14 +183,14 @@ export function RestTimer({ initialSeconds, onClose }: RestTimerProps) {
             {isMuted ? <BellOff size={14} /> : <Bell size={14} />}
           </button>
           <button
-            onClick={() => setIsMinimized(true)}
+            onClick={() => setMinimized(true)}
             title="Minimize into floating pill"
             className="p-2 bg-background hover:bg-border/40 border border-border rounded-xl text-xs font-medium transition-colors opacity-70 hover:opacity-100"
           >
             <Minimize2 size={14} />
           </button>
           <button
-            onClick={onClose}
+            onClick={stopTimer}
             title="Dismiss timer"
             className="p-2 bg-background hover:bg-tag-red-bg hover:text-tag-red-text border border-border rounded-xl text-xs font-medium transition-colors ml-0.5"
           >

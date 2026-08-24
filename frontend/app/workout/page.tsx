@@ -20,7 +20,7 @@ import { apiClient } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Loader";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { ExercisePicker } from "../../components/routines/ExercisePicker";
-import { RestTimer } from "../../components/workout/RestTimer";
+import { useRestTimerStore } from "../../store/restTimerStore";
 import {
   WorkoutExerciseCard,
   WorkoutExerciseItem,
@@ -35,7 +35,6 @@ function WorkoutContent() {
 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [completedSummary, setCompletedSummary] = useState<any | null>(null);
@@ -152,7 +151,7 @@ function WorkoutContent() {
       queryClient.setQueryData(["activeWorkout"], null);
       queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
       setShowCancelModal(false);
-      setRestTimerSeconds(null);
+      useRestTimerStore.getState().stopTimer();
     },
   });
 
@@ -195,7 +194,7 @@ function WorkoutContent() {
   };
 
   const handleSetCompleted = (restSeconds: number) => {
-    setRestTimerSeconds(restSeconds || 90);
+    useRestTimerStore.getState().startTimer(restSeconds || 90);
   };
 
   if (isLoadingActive) return <PageLoader />;
@@ -205,7 +204,7 @@ function WorkoutContent() {
   // -------------------------------------------------------------
   if (!activeWorkout) {
     return (
-      <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-3xl mx-auto w-full pb-24">
+      <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-24">
         {/* Header */}
         <header className="pb-6 mb-6 border-b border-border">
           <h1 className="text-3xl font-light tracking-tight">Workout</h1>
@@ -270,7 +269,7 @@ function WorkoutContent() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {routines?.map((routine: any) => (
                 <div
                   key={routine.id}
@@ -314,7 +313,7 @@ function WorkoutContent() {
   const routineName = activeWorkout.routine?.name || "Active Workout";
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-3xl mx-auto w-full pb-32 relative">
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-32 relative">
       {/* Sticky Active Session Header */}
       <header className="sticky top-0 bg-background/95 backdrop-blur-md z-30 pt-2 pb-4 mb-6 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -387,8 +386,8 @@ function WorkoutContent() {
       )}
 
       {/* Bottom Floating Bar: Finish Workout */}
-      <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-30 pointer-events-none">
-        <div className="bg-surface/90 backdrop-blur-md border border-border p-2 rounded-2xl shadow-xl flex items-center gap-3 pointer-events-auto">
+      <div className="fixed bottom-20 md:bottom-6 left-0 md:left-64 right-0 flex justify-center px-4 z-30 pointer-events-none">
+        <div className="w-full max-w-4xl bg-surface/90 backdrop-blur-md border border-border p-2 rounded-2xl shadow-xl flex items-center gap-3 pointer-events-auto">
           <button
             onClick={() => finishWorkoutMutation.mutate()}
             disabled={finishWorkoutMutation.isPending}
@@ -404,13 +403,6 @@ function WorkoutContent() {
         </div>
       </div>
 
-      {/* Rest Timer Overlay */}
-      {restTimerSeconds !== null && (
-        <RestTimer
-          initialSeconds={restTimerSeconds}
-          onClose={() => setRestTimerSeconds(null)}
-        />
-      )}
 
       {/* Exercise Picker Modal */}
       {isPickerOpen && (

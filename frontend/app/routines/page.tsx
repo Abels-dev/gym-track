@@ -31,7 +31,7 @@ export default function RoutinesPage() {
   if (isLoading) return <PageLoader />;
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-3xl mx-auto w-full">
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border">
         <div>
           <h1 className="text-3xl font-light tracking-tight">Routines</h1>
@@ -63,7 +63,7 @@ export default function RoutinesPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {routines?.map((routine) => (
             <Link
               key={routine.id}

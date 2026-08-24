@@ -16,6 +16,7 @@ interface Exercise {
   equipment: string;
   imageUrl?: string;
   instructions?: string;
+  videoUrl?: string;
 }
 
 interface ExercisePickerProps {

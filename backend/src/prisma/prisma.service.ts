@@ -13,6 +13,7 @@ function createPrismaAdapter(databaseUrl: string) {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace(/^\/+/, ''),
     connectionLimit: 10,
+    allowPublicKeyRetrieval: true,
   });
 }
 

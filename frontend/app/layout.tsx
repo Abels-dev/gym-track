@@ -8,6 +8,7 @@ import { SideNav } from "../components/layout/SideNav";
 import { AuthGuard } from "../components/auth/AuthGuard";
 import { SyncStatusBadge } from "../components/ui/SyncStatusBadge";
 import { InstallPwaBanner } from "../components/ui/InstallPwaBanner";
+import { RestTimer } from "../components/workout/RestTimer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,16 +50,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-dvh flex flex-col md:flex-row bg-background text-foreground justify-center">
+      <body className="min-h-dvh flex flex-col md:flex-row bg-background text-foreground">
         <QueryProvider>
           <ThemeProvider>
             <AuthGuard>
               <SyncStatusBadge />
               <InstallPwaBanner />
               <SideNav />
-              <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full border-x border-transparent md:border-border min-h-dvh shadow-sm shadow-border/10">
+              <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full min-w-0 min-h-dvh">
                 {children}
               </main>
+              <RestTimer />
               <BottomNav />
             </AuthGuard>
           </ThemeProvider>

@@ -117,7 +117,7 @@ export default function EditRoutinePage() {
   if (isLoading || !routine) return <PageLoader />;
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-3xl mx-auto w-full relative">
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-5xl mx-auto w-full relative">
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border sticky top-0 bg-background z-10 pt-4">
         <div className="flex items-center gap-4">
           <Link href={`/routines/${routineId}`} className="p-2 -ml-2 rounded-md hover:bg-border/50 transition-colors">

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Plus, Trash2, Dumbbell, MoreVertical, History } from "lucide-react";
+import { Check, Plus, Trash2, Dumbbell, MoreVertical, History, Info } from "lucide-react";
 import { apiClient } from "../../lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ConfirmModal } from "../ui/ConfirmModal";
+import { ExerciseDetailModal } from "../routines/ExerciseDetailModal";
 
 export interface WorkoutSet {
   id: string;
   setNumber: number;
   weight: number;
   reps: number;
-  rir?: number | null;
   isCompleted: boolean;
 }
 
@@ -49,6 +49,7 @@ export function WorkoutExerciseCard({
 }: WorkoutExerciseCardProps) {
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [localSets, setLocalSets] = useState<WorkoutSet[]>(workoutExercise.sets);
 
   // Fetch previous session performance for this exercise
@@ -75,7 +76,7 @@ export function WorkoutExerciseCard({
       data,
     }: {
       setId: string;
-      data: { weight?: number; reps?: number; rir?: number | null; isCompleted?: boolean };
+      data: { weight?: number; reps?: number; isCompleted?: boolean };
     }) => {
       await apiClient.patch(`/workouts/sets/${setId}`, data);
     },
@@ -138,7 +139,6 @@ export function WorkoutExerciseCard({
         data: {
           weight: set.weight,
           reps: set.reps,
-          rir: set.rir,
           isCompleted: nextCompleted,
         },
       },
@@ -185,13 +185,23 @@ export function WorkoutExerciseCard({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          title="Remove exercise"
-          className="p-2 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowInfoModal(true)}
+            title="Exercise guide & technique video"
+            className="p-2 text-foreground/40 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            <Info size={18} />
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            title="Remove exercise"
+            className="p-2 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Sets Table */}
@@ -205,7 +215,6 @@ export function WorkoutExerciseCard({
                 {preferredUnit.toUpperCase()}
               </th>
               <th className="py-2.5 px-2 min-w-[80px]">Reps</th>
-              <th className="py-2.5 px-2 w-16 text-center">RIR</th>
               <th className="py-2.5 px-2 w-14 text-center">Done</th>
               <th className="py-2.5 px-1 w-8"></th>
             </tr>
@@ -291,31 +300,6 @@ export function WorkoutExerciseCard({
                     />
                   </td>
 
-                  {/* RIR Input */}
-                  <td className="py-2 px-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={set.rir ?? ""}
-                      placeholder="-"
-                      onChange={(e) =>
-                        handleSetChange(
-                          set.id,
-                          "rir",
-                          e.target.value === "" ? null : parseInt(e.target.value)
-                        )
-                      }
-                      onBlur={(e) =>
-                        handleSetBlur(
-                          set.id,
-                          "rir",
-                          e.target.value === "" ? null : parseInt(e.target.value)
-                        )
-                      }
-                      className="w-full px-2 py-1.5 bg-background border border-border rounded-lg text-xs font-medium focus:outline-none focus:border-primary transition-colors text-center"
-                    />
-                  </td>
 
                   {/* Checkbox Complete */}
                   <td className="py-2 px-2 text-center">
@@ -371,6 +355,13 @@ export function WorkoutExerciseCard({
           isDestructive={true}
           onConfirm={() => removeExerciseMutation.mutate()}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {showInfoModal && (
+        <ExerciseDetailModal
+          exercise={workoutExercise.exercise as any}
+          onClose={() => setShowInfoModal(false)}
         />
       )}
     </div>

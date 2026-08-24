@@ -32,7 +32,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-5xl mx-auto w-full">
       {/* Header */}
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border">
         <div>
@@ -51,7 +51,7 @@ export default function ProfilePage() {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div className="border border-border bg-surface p-4 rounded-lg flex flex-col gap-1">
           <div className="flex items-center gap-2 opacity-70 mb-2">
             <User size={16} />

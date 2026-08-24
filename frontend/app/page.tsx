@@ -67,7 +67,7 @@ export default function Home() {
   const preferredUnit = profile?.preferredUnit || "kg";
 
   return (
-    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full pb-28">
+    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-28">
       {/* Header */}
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border">
         <div>

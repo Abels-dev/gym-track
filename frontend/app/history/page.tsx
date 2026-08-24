@@ -127,7 +127,7 @@ export default function HistoryPage() {
   );
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 max-w-3xl mx-auto w-full pb-24">
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-24">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-border gap-4">
         <div>
@@ -360,7 +360,7 @@ export default function HistoryPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredPrs?.map((pr) => (
                 <div
                   key={pr.exerciseName}

@@ -9,7 +9,7 @@ Gym Track is an offline-first workout tracking and progressive overload applicat
 - **Active Workout Tracking (`/workout`)**
   - Real-time session elapsed timer with automatic state recovery across refreshes and tab switches.
   - Previous performance indicators (*e.g., 80 kg × 10*) and ghost placeholder values to guide progressive overload.
-  - Interactive set logging for weight, repetitions, and RIR (Reps in Reserve).
+  - Interactive set logging for weight and repetitions.
   - Dynamic in-session modifications (add/remove sets and exercises on the fly).
   - Post-session completion summary calculating total volume lifted and duration.
 
