@@ -15,6 +15,9 @@ import {
 import { apiClient } from "../lib/api";
 import { PageLoader } from "../components/ui/Loader";
 import { useAuthStore } from "../store/authStore";
+import { WeeklyConsistencyRing } from "../components/analytics/WeeklyConsistencyRing";
+import { VolumeTrendChart } from "../components/analytics/VolumeTrendChart";
+import { MuscleSplitDonut } from "../components/analytics/MuscleSplitDonut";
 
 export default function Home() {
   const user = useAuthStore((state) => state.user);
@@ -62,22 +65,9 @@ export default function Home() {
   });
 
   const preferredUnit = profile?.preferredUnit || "kg";
-  const muscleEntries = Object.entries(muscleDist || {}).sort(
-    ([, a], [, b]) => (b as number) - (a as number)
-  );
-
-  const getTagStyle = (index: number) => {
-    const styles = [
-      "bg-tag-blue-bg text-tag-blue-text border-tag-blue-text/20",
-      "bg-tag-green-bg text-tag-green-text border-tag-green-text/20",
-      "bg-tag-red-bg text-tag-red-text border-tag-red-text/20",
-      "bg-tag-yellow-bg text-tag-yellow-text border-tag-yellow-text/20",
-    ];
-    return styles[index % styles.length];
-  };
 
   return (
-    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full pb-24">
+    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full pb-28">
       {/* Header */}
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border">
         <div>
@@ -125,9 +115,53 @@ export default function Home() {
         </div>
       )}
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+      {/* Weekly Consistency Ring & Quick Launcher Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <WeeklyConsistencyRing
+          currentWorkouts={summary?.currentWeekWorkoutsCount ?? 0}
+          targetDays={summary?.targetDaysPerWeek ?? 4}
+          daysWithWorkout={summary?.currentWeekDaysWithWorkout ?? []}
+        />
+
+        {/* Quick Launch Cards Stack */}
+        <div className="flex flex-col gap-3 justify-between">
+          <Link
+            href="/workout"
+            className="p-5 bg-surface border border-border rounded-3xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm flex-1"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-primary/10 text-primary rounded-2xl group-hover:scale-105 transition-transform">
+                <Play size={20} fill="currentColor" />
+              </div>
+              <div>
+                <h3 className="font-medium text-base">Quick Session</h3>
+                <p className="text-xs opacity-70">Log an on-the-go workout</p>
+              </div>
+            </div>
+            <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+          </Link>
+
+          <Link
+            href="/routines"
+            className="p-5 bg-surface border border-border rounded-3xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm flex-1"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-primary/10 text-primary rounded-2xl group-hover:scale-105 transition-transform">
+                <List size={20} />
+              </div>
+              <div>
+                <h3 className="font-medium text-base">My Routines</h3>
+                <p className="text-xs opacity-70">Manage training splits</p>
+              </div>
+            </div>
+            <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Lifetime Stats Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="border border-border bg-surface p-5 rounded-3xl flex flex-col gap-1 shadow-sm">
           <div className="flex items-center gap-2 opacity-70 mb-1">
             <Dumbbell size={16} />
             <span className="text-xs font-medium uppercase tracking-wider">
@@ -139,7 +173,7 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+        <div className="border border-border bg-surface p-5 rounded-3xl flex flex-col gap-1 shadow-sm">
           <div className="flex items-center gap-2 opacity-70 mb-1">
             <Flame size={16} className="text-tag-red-text" />
             <span className="text-xs font-medium uppercase tracking-wider">
@@ -155,7 +189,7 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+        <div className="border border-border bg-surface p-5 rounded-3xl flex flex-col gap-1 shadow-sm">
           <div className="flex items-center gap-2 opacity-70 mb-1">
             <TrendingUp size={16} className="text-tag-green-text" />
             <span className="text-xs font-medium uppercase tracking-wider">
@@ -170,71 +204,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Quick Launch Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <Link
-          href="/workout"
-          className="p-5 bg-surface border border-border rounded-2xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:scale-105 transition-transform">
-              <Play size={20} fill="currentColor" />
-            </div>
-            <div>
-              <h3 className="font-medium text-base">Quick Session</h3>
-              <p className="text-xs opacity-70">Log an on-the-go workout</p>
-            </div>
-          </div>
-          <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-        </Link>
-
-        <Link
-          href="/routines"
-          className="p-5 bg-surface border border-border rounded-2xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:scale-105 transition-transform">
-              <List size={20} />
-            </div>
-            <div>
-              <h3 className="font-medium text-base">My Routines</h3>
-              <p className="text-xs opacity-70">Manage training splits</p>
-            </div>
-          </div>
-          <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-        </Link>
+      {/* Volume & Frequency Trends Chart */}
+      <div className="mb-6">
+        <VolumeTrendChart
+          trends={summary?.weeklyTrends ?? []}
+          preferredUnit={preferredUnit}
+        />
       </div>
 
-      {/* Muscle Focus / Volume Distribution */}
-      <section className="bg-surface border border-border p-6 rounded-2xl shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Activity size={18} className="opacity-70" />
-            <h2 className="text-base font-medium">Muscle Focus</h2>
-          </div>
-          <span className="text-xs opacity-50">Sets completed</span>
-        </div>
-
-        {muscleEntries.length === 0 ? (
-          <p className="text-sm opacity-60">
-            Complete your first workout to see your targeted muscle breakdown.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {muscleEntries.map(([muscle, count], idx) => (
-              <span
-                key={muscle}
-                className={`border px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wider uppercase flex items-center gap-2 ${getTagStyle(
-                  idx
-                )}`}
-              >
-                <span>{muscle}</span>
-                <span className="opacity-70 font-normal">({count} sets)</span>
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Muscle Focus & Split Analysis */}
+      <div>
+        <MuscleSplitDonut distribution={muscleDist ?? {}} />
+      </div>
     </div>
   );
 }

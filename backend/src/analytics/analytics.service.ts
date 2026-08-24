@@ -18,13 +18,18 @@ export class AnalyticsService {
     const workouts = await this.prisma.workoutLog.findMany({
       where: { userId, endedAt: { not: null } },
       orderBy: { startedAt: 'desc' },
-      select: { startedAt: true },
+      include: {
+        exercises: {
+          include: {
+            sets: { where: { isCompleted: true } },
+          },
+        },
+      },
     });
 
     const totalWorkouts = workouts.length;
 
-    // 3. Calculate Weekly Streak
-    // We group workouts by "week starting Monday"
+    // 3. Calculate Weekly Streak and Current Week metrics
     const getMonday = (d: Date) => {
       const date = new Date(d);
       const day = date.getDay() || 7; 
@@ -33,6 +38,22 @@ export class AnalyticsService {
       return date.getTime();
     };
 
+    const currentWeekMonday = getMonday(new Date());
+    const currentWeekWorkouts = workouts.filter(
+      (w) => getMonday(w.startedAt) === currentWeekMonday
+    );
+    const currentWeekWorkoutsCount = currentWeekWorkouts.length;
+
+    // Which days of this week had a workout (1=Mon, 7=Sun)
+    const currentWeekDaysWithWorkout = Array.from(
+      new Set(
+        currentWeekWorkouts.map((w) => {
+          const d = new Date(w.startedAt).getDay();
+          return d === 0 ? 7 : d;
+        })
+      )
+    ).sort();
+
     const workoutsByWeek = new Map<number, number>();
     workouts.forEach((w) => {
       const weekTimestamp = getMonday(w.startedAt);
@@ -40,7 +61,6 @@ export class AnalyticsService {
     });
 
     let currentStreak = 0;
-    const currentWeekMonday = getMonday(new Date());
     
     // Check current week
     if ((workoutsByWeek.get(currentWeekMonday) || 0) >= requiredWorkoutsPerWeek) {
@@ -61,27 +81,54 @@ export class AnalyticsService {
       }
     }
 
-    // 4. Total volume
-    const sets = await this.prisma.setLog.findMany({
-      where: {
-        isCompleted: true,
-        workoutExercise: {
-          workoutLog: {
-            userId,
-            endedAt: { not: null },
-          },
-        },
-      },
-      select: { weight: true, reps: true },
+    // 4. Total volume and weekly trend breakdown (last 6 weeks)
+    let totalVolume = 0;
+    const weeklyTrendMap = new Map<number, { volume: number; count: number }>();
+
+    // Pre-seed last 6 weeks
+    for (let i = 5; i >= 0; i--) {
+      const ts = currentWeekMonday - i * 7 * 24 * 60 * 60 * 1000;
+      weeklyTrendMap.set(ts, { volume: 0, count: 0 });
+    }
+
+    workouts.forEach((w) => {
+      const weekTs = getMonday(w.startedAt);
+      let sessionVolume = 0;
+      w.exercises.forEach((ex) => {
+        ex.sets.forEach((s) => {
+          sessionVolume += (s.weight || 0) * (s.reps || 0);
+        });
+      });
+
+      totalVolume += sessionVolume;
+
+      if (weeklyTrendMap.has(weekTs)) {
+        const curr = weeklyTrendMap.get(weekTs)!;
+        curr.volume += sessionVolume;
+        curr.count += 1;
+      }
     });
 
-    const totalVolume = sets.reduce((acc, set) => acc + (set.weight * set.reps), 0);
+    const weeklyTrends = Array.from(weeklyTrendMap.entries()).map(([ts, val], idx) => {
+      const d = new Date(ts);
+      const label = `W${idx + 1} (${d.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })})`;
+      return {
+        timestamp: ts,
+        label,
+        volume: val.volume,
+        workoutsCount: val.count,
+      };
+    });
 
     return {
       totalWorkouts,
       totalVolume,
       currentWeeklyStreak: currentStreak,
       requiredWorkoutsPerWeek,
+      targetDaysPerWeek,
+      currentWeekWorkoutsCount,
+      currentWeekDaysWithWorkout,
+      weeklyTrends,
     };
   }
 
