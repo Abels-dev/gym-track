@@ -18,6 +18,7 @@ import { useAuthStore } from "../store/authStore";
 import { WeeklyConsistencyRing } from "../components/analytics/WeeklyConsistencyRing";
 import { VolumeTrendChart } from "../components/analytics/VolumeTrendChart";
 import { MuscleSplitDonut } from "../components/analytics/MuscleSplitDonut";
+import { CoachInsightsCard } from "../components/analytics/CoachInsightsCard";
 
 export default function Home() {
   const user = useAuthStore((state) => state.user);
@@ -158,6 +159,9 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Smart Coach Recommendations */}
+      <CoachInsightsCard />
 
       {/* Lifetime Stats Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

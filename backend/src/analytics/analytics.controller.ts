@@ -23,4 +23,9 @@ export class AnalyticsController {
   getMuscleDistribution(@CurrentUser() user: AuthPrincipal) {
     return this.analyticsService.getMuscleDistribution(user.id);
   }
+
+  @Get('insights')
+  getCoachInsights(@CurrentUser() user: AuthPrincipal) {
+    return this.analyticsService.getCoachInsights(user.id);
+  }
 }

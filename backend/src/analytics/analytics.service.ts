@@ -204,4 +204,242 @@ export class AnalyticsService {
 
     return distribution;
   }
+
+  async getCoachInsights(userId: string) {
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+    });
+
+    const targetDaysPerWeek = profile?.targetDaysPerWeek || 4;
+    const goal = profile?.primaryGoal || 'MUSCLE_GAIN';
+    const experience = profile?.experienceLevel || 'BEGINNER';
+    const preferredUnit = profile?.preferredUnit === 'LBS' ? 'lbs' : 'kg';
+
+    // Fetch user workouts completed in the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const workouts = await this.prisma.workoutLog.findMany({
+      where: {
+        userId,
+        endedAt: { not: null },
+        startedAt: { gte: thirtyDaysAgo },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: {
+        exercises: {
+          include: {
+            exercise: true,
+            sets: { where: { isCompleted: true }, orderBy: { setNumber: 'asc' } },
+          },
+        },
+      },
+    });
+
+    const insights: Array<{
+      id: string;
+      type: 'PROGRESSION' | 'RECOVERY' | 'BALANCE' | 'CONSISTENCY' | 'GOAL_TIP';
+      title: string;
+      message: string;
+      actionText?: string;
+      actionHref?: string;
+      priority: 'HIGH' | 'MEDIUM' | 'LOW';
+      categoryIcon: 'flame' | 'trending-up' | 'scale' | 'shield' | 'target' | 'dumbbell';
+      badge?: string;
+    }> = [];
+
+    const now = new Date();
+    // Monday as start of week
+    const currentDay = now.getDay() === 0 ? 7 : now.getDay(); // 1=Mon, 7=Sun
+    const daysLeftInWeek = 7 - currentDay;
+
+    const startOfCurrentWeek = new Date(now);
+    startOfCurrentWeek.setDate(now.getDate() - (currentDay - 1));
+    startOfCurrentWeek.setHours(0, 0, 0, 0);
+
+    const thisWeekWorkouts = workouts.filter(
+      (w) => new Date(w.startedAt).getTime() >= startOfCurrentWeek.getTime()
+    );
+    const thisWeekCount = thisWeekWorkouts.length;
+    const lastWorkout = workouts[0];
+
+    // 1. CONSISTENCY & PACING
+    if (thisWeekCount >= targetDaysPerWeek) {
+      insights.push({
+        id: 'target-achieved',
+        type: 'CONSISTENCY',
+        title: 'Weekly Target Smashed',
+        message: `You've completed ${thisWeekCount} of ${targetDaysPerWeek} planned workouts this week! Great job staying committed to progressive gains.`,
+        priority: 'HIGH',
+        categoryIcon: 'flame',
+        badge: 'On Fire',
+      });
+    } else {
+      const remainingNeeded = targetDaysPerWeek - thisWeekCount;
+      if (daysLeftInWeek < remainingNeeded) {
+        insights.push({
+          id: 'catch-up-schedule',
+          type: 'CONSISTENCY',
+          title: 'Tight Schedule Ahead',
+          message: `You have ${remainingNeeded} workouts remaining to hit your ${targetDaysPerWeek}-day target with ${daysLeftInWeek} ${daysLeftInWeek === 1 ? 'day' : 'days'} left this week. A quick session today will keep you on track!`,
+          actionText: 'Start Workout',
+          actionHref: '/workout',
+          priority: 'HIGH',
+          categoryIcon: 'target',
+          badge: 'Weekly Goal',
+        });
+      } else if (lastWorkout) {
+        const daysSinceLast = Math.floor((now.getTime() - new Date(lastWorkout.startedAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceLast >= 3) {
+          insights.push({
+            id: 'resume-momentum',
+            type: 'CONSISTENCY',
+            title: 'Time to Regain Momentum',
+            message: `It has been ${daysSinceLast} days since your last workout. Consistent stimulation is key for strength adaptations and muscle protein synthesis.`,
+            actionText: 'Quick Session',
+            actionHref: '/workout',
+            priority: 'HIGH',
+            categoryIcon: 'flame',
+            badge: 'Streak',
+          });
+        }
+      }
+    }
+
+    // 2. RECOVERY & REST CHECKS
+    if (thisWeekWorkouts.length >= 4) {
+      // Check for consecutive training days
+      const workoutDays = Array.from(new Set(thisWeekWorkouts.map((w) => new Date(w.startedAt).toDateString())));
+      if (workoutDays.length >= 4) {
+        insights.push({
+          id: 'active-recovery-tip',
+          type: 'RECOVERY',
+          title: 'Prioritize Muscle Recovery',
+          message: `You've logged ${workoutDays.length} sessions in close succession. Consider an active recovery day or mobility work tomorrow to prevent fatigue accumulation.`,
+          priority: 'MEDIUM',
+          categoryIcon: 'shield',
+          badge: 'Recovery',
+        });
+      }
+    }
+
+    // 3. MUSCLE BALANCE & SYMMETRY
+    let pushSets = 0;
+    let pullSets = 0;
+    let legSets = 0;
+    let totalSets = 0;
+
+    workouts.forEach((w) => {
+      w.exercises.forEach((ex) => {
+        const count = ex.sets.length;
+        totalSets += count;
+        if (ex.exercise.category === 'PUSH') pushSets += count;
+        if (ex.exercise.category === 'PULL') pullSets += count;
+        if (ex.exercise.category === 'LEGS') legSets += count;
+      });
+    });
+
+    if (totalSets >= 12) {
+      const legRatio = Math.round((legSets / totalSets) * 100);
+      const pushRatio = Math.round((pushSets / totalSets) * 100);
+      const pullRatio = Math.round((pullSets / totalSets) * 100);
+
+      if (legRatio < 15) {
+        insights.push({
+          id: 'balance-legs',
+          type: 'BALANCE',
+          title: 'Lower Body Volume Needed',
+          message: `Leg volume accounts for only ${legRatio}% of your recent sets (${legSets} of ${totalSets} sets). Adding squats, Romanian deadlifts, or leg press will build a balanced foundation.`,
+          actionText: 'Explore Leg Exercises',
+          actionHref: '/exercises',
+          priority: 'HIGH',
+          categoryIcon: 'scale',
+          badge: 'Balance',
+        });
+      } else if (pushRatio > 55 && pullRatio < 25) {
+        insights.push({
+          id: 'balance-push-pull',
+          type: 'BALANCE',
+          title: 'Push vs Pull Disparity',
+          message: `You're logging significantly more pressing (${pushRatio}%) than pulling movements (${pullRatio}%). Increasing rows and lat pulldowns protects posture and shoulder health.`,
+          actionText: 'View Pull Exercises',
+          actionHref: '/exercises',
+          priority: 'MEDIUM',
+          categoryIcon: 'scale',
+          badge: 'Symmetry',
+        });
+      }
+    }
+
+    // 4. PROGRESSIVE OVERLOAD OPPORTUNITY
+    if (workouts.length >= 2) {
+      // Find an exercise completed in recent workouts with consistent reps
+      for (const w of workouts) {
+        let foundOverload = false;
+        for (const we of w.exercises) {
+          if (we.sets.length >= 2 && we.sets.every((s) => s.reps >= 8 && s.weight > 0)) {
+            const avgWeight = we.sets[0].weight;
+            const step = preferredUnit === 'lbs' ? 5 : 2.5;
+            const nextWeight = avgWeight + step;
+
+            insights.push({
+              id: `overload-${we.exercise.id}`,
+              type: 'PROGRESSION',
+              title: `Ready to Overload: ${we.exercise.name}`,
+              message: `You completed solid ${we.sets.length}-set volume on ${we.exercise.name} at ${avgWeight} ${preferredUnit}. On your next session, aim for ${nextWeight} ${preferredUnit} to trigger progressive overload.`,
+              actionText: 'Log Next Workout',
+              actionHref: '/workout',
+              priority: 'HIGH',
+              categoryIcon: 'trending-up',
+              badge: `+${step} ${preferredUnit}`,
+            });
+            foundOverload = true;
+            break;
+          }
+        }
+        if (foundOverload) break;
+      }
+    }
+
+    // 5. GOAL & EXPERIENCE TAILORED PRINCIPLE TIP
+    const goalTips: Record<string, { title: string; message: string; badge: string }> = {
+      MUSCLE_GAIN: {
+        title: 'Hypertrophy Volume Sweet Spot',
+        message: 'For optimal muscle growth, aim for 10–18 high-quality working sets per muscle group each week, training within 1–3 reps of muscular failure.',
+        badge: 'Hypertrophy',
+      },
+      STRENGTH: {
+        title: 'Neuromuscular Power & Rest',
+        message: 'On heavy compound lifts (squats, deadlifts, presses), take 2–3 minutes of rest between sets to allow full ATP-CP energy replenishment.',
+        badge: 'Strength',
+      },
+      WEIGHT_LOSS: {
+        title: 'Preserve Lean Mass While Cutting',
+        message: 'Maintain lifting intensity and load even in a caloric deficit. Lifting heavy signals your body to retain muscle while burning fat.',
+        badge: 'Fat Loss',
+      },
+      GENERAL_FITNESS: {
+        title: 'Balanced Longevity & Mobility',
+        message: 'Combine full range-of-motion resistance movements with steady weekly consistency to improve joint health, posture, and cardiovascular efficiency.',
+        badge: 'Longevity',
+      },
+    };
+
+    const tip = goalTips[goal] || goalTips.MUSCLE_GAIN;
+    insights.push({
+      id: `goal-tip-${goal.toLowerCase()}`,
+      type: 'GOAL_TIP',
+      title: tip.title,
+      message: tip.message,
+      priority: 'LOW',
+      categoryIcon: 'target',
+      badge: tip.badge,
+    });
+
+    // Ensure highest priority items appear first
+    const priorityWeight: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+    insights.sort((a, b) => priorityWeight[b.priority] - priorityWeight[a.priority]);
+
+    return insights.slice(0, 4);
+  }
 }
