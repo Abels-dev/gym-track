@@ -6,6 +6,8 @@ import { ThemeProvider } from "../providers/ThemeProvider";
 import { BottomNav } from "../components/layout/BottomNav";
 import { SideNav } from "../components/layout/SideNav";
 import { AuthGuard } from "../components/auth/AuthGuard";
+import { SyncStatusBadge } from "../components/ui/SyncStatusBadge";
+import { InstallPwaBanner } from "../components/ui/InstallPwaBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,6 +53,8 @@ export default function RootLayout({
         <QueryProvider>
           <ThemeProvider>
             <AuthGuard>
+              <SyncStatusBadge />
+              <InstallPwaBanner />
               <SideNav />
               <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full border-x border-transparent md:border-border min-h-dvh shadow-sm shadow-border/10">
                 {children}
