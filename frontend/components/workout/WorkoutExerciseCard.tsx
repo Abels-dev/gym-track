@@ -233,7 +233,7 @@ export function WorkoutExerciseCard({
                   <td className="py-2.5 px-2 text-xs font-mono opacity-60">
                     {prevSet ? (
                       <span className="bg-border/30 px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap">
-                        {prevSet.weight}kg × {prevSet.reps}
+                        {prevSet.weight} {preferredUnit} × {prevSet.reps}
                       </span>
                     ) : (
                       <span className="opacity-40">—</span>
