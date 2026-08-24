@@ -25,7 +25,7 @@ Gym Track is an offline-first workout tracking and progressive overload applicat
 
 - **Routines & Exercise Database (`/routines`, `/exercises`)**
   - Custom training split builder with target rep ranges and rest durations.
-  - Catalog of 80+ seeded exercises filterable by category (Push, Pull, Legs, Core) and equipment (Barbell, Dumbbell, Machine, Cable, Bodyweight) with detailed execution guides.
+  - Searchable catalog of exercises filterable by category (Push, Pull, Legs, Core) and equipment (Barbell, Dumbbell, Machine, Cable, Bodyweight) with execution guides.
 
 - **Interactive Analytics & History (`/`, `/history`)**
   - Weekly consistency target ring with active day-of-week checkmarks.
@@ -54,46 +54,6 @@ Gym Track is an offline-first workout tracking and progressive overload applicat
 - **Database ORM**: Prisma 7 (MySQL / MariaDB)
 - **Authentication**: JWT, Passport.js, Bcrypt
 - **Email**: Nodemailer (OTP password recovery)
-
----
-
-## Project Structure
-
-```
-gym-track/
-├── backend/
-│   ├── prisma/
-│   │   └── schema.prisma       # Database models & relations
-│   ├── src/
-│   │   ├── analytics/          # Streaks, volume trends, PR aggregations
-│   │   ├── auth/               # JWT auth & OTP password recovery
-│   │   ├── exercises/          # Exercise database queries & filters
-│   │   ├── profile/            # User preferences & equipment setup
-│   │   ├── routines/           # Split routines management
-│   │   └── workout-logs/       # Live session logging & history
-│   └── package.json
-│
-├── frontend/
-│   ├── app/
-│   │   ├── (auth)/             # Login, register, password reset flows
-│   │   ├── exercises/          # Exercise catalog & movement guides
-│   │   ├── history/            # Workout history logs & PR showcase
-│   │   ├── profile/            # User settings & theme toggle
-│   │   ├── routines/           # Routine split builder
-│   │   └── workout/            # Active live workout session logger
-│   ├── components/
-│   │   ├── analytics/          # Consistency rings & trend charts
-│   │   ├── layout/             # Navigation bars (desktop & mobile)
-│   │   ├── routines/           # Exercise picker & detail modals
-│   │   ├── ui/                 # Reusable UI primitives & badges
-│   │   └── workout/            # Rest timer & exercise set cards
-│   ├── lib/
-│   │   ├── api.ts              # Axios client with offline fallback
-│   │   ├── audio.ts            # Web Audio API chime synthesizer
-│   │   └── syncQueue.ts        # IndexedDB offline mutation queue
-│   ├── providers/              # React Query & Theme providers
-│   └── store/                  # Zustand authentication store
-```
 
 ---
 
@@ -131,8 +91,9 @@ gym-track/
    EMAIL_PASS="your-email-app-password"
    ```
 
-4. Run database migrations:
+4. Generate the Prisma client and run database migrations:
    ```bash
+   npx prisma generate
    npx prisma migrate dev --name init
    ```
 
@@ -171,7 +132,7 @@ gym-track/
 
 ## Production Build
 
-To build both services for production:
+To verify and build both services for production:
 
 ```bash
 # Build backend
