@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LogOut, User, Target, Settings, Activity } from "lucide-react";
+import { LogOut, User, Target, Settings, Activity, Palette } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
 import { useRouter } from "next/navigation";
 import { PageLoader } from "../../components/ui/Loader";
+import { ThemeToggle } from "../../components/ui/ThemeToggle";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -108,6 +109,18 @@ export default function ProfilePage() {
             <span className="text-sm opacity-50">No equipment selected</span>
           )}
         </div>
+      </section>
+
+      {/* Theme / Appearance Section */}
+      <section className="mb-8 p-4 bg-surface border border-border rounded-xl flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Palette size={20} className="opacity-70" />
+          <div>
+            <h3 className="text-sm font-medium">Appearance</h3>
+            <p className="text-xs opacity-60">Customize app theme color</p>
+          </div>
+        </div>
+        <ThemeToggle />
       </section>
 
       {/* Action Buttons */}

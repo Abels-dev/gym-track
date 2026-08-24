@@ -1,48 +1,259 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import {
+  Play,
+  Dumbbell,
+  Flame,
+  TrendingUp,
+  ArrowRight,
+  List,
+  Activity,
+  Plus,
+} from "lucide-react";
+import { apiClient } from "../lib/api";
+import { PageLoader } from "../components/ui/Loader";
+import { useAuthStore } from "../store/authStore";
+
 export default function Home() {
+  const user = useAuthStore((state) => state.user);
+
+  // 1. Fetch Analytics Summary
+  const { data: summary, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ["analytics", "summary"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/analytics/summary");
+      return data;
+    },
+  });
+
+  // 2. Fetch Muscle Distribution
+  const { data: muscleDist } = useQuery<Record<string, number>>({
+    queryKey: ["analytics", "muscle-distribution"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/analytics/muscle-distribution");
+      return data;
+    },
+  });
+
+  // 3. Fetch User Profile
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/profile");
+      return data;
+    },
+  });
+
+  // 4. Check Active Workout
+  const { data: activeWorkout } = useQuery({
+    queryKey: ["activeWorkout"],
+    queryFn: async () => {
+      try {
+        const { data } = await apiClient.get("/workouts/active");
+        return data;
+      } catch (err: any) {
+        if (err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+    retry: false,
+  });
+
+  const preferredUnit = profile?.preferredUnit || "kg";
+  const muscleEntries = Object.entries(muscleDist || {}).sort(
+    ([, a], [, b]) => (b as number) - (a as number)
+  );
+
+  const getTagStyle = (index: number) => {
+    const styles = [
+      "bg-tag-blue-bg text-tag-blue-text border-tag-blue-text/20",
+      "bg-tag-green-bg text-tag-green-text border-tag-green-text/20",
+      "bg-tag-red-bg text-tag-red-text border-tag-red-text/20",
+      "bg-tag-yellow-bg text-tag-yellow-text border-tag-yellow-text/20",
+    ];
+    return styles[index % styles.length];
+  };
+
   return (
-    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8">
+    <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full pb-24">
       {/* Header */}
       <header className="flex items-center justify-between pb-6 mb-6 border-b border-border">
-        <h1 className="text-3xl font-light tracking-tight">Gym Track</h1>
-        <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium text-sm transition-opacity hover:opacity-90">
-          Sync Data
-        </button>
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-wider opacity-60">
+            Welcome back
+          </span>
+          <h1 className="text-3xl font-light tracking-tight capitalize">
+            {user?.fullName || "Dashboard"}
+          </h1>
+        </div>
+        <Link
+          href="/workout"
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-medium text-sm shadow-md shadow-primary/20 hover:scale-[1.02] transition-all"
+        >
+          <Play size={16} fill="currentColor" />
+          <span>Start Workout</span>
+        </Link>
       </header>
 
-      {/* Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="border border-border bg-surface p-4 rounded-lg flex flex-col gap-1">
-          <span className="text-sm font-medium opacity-70">Total Workouts</span>
-          <span className="text-2xl font-semibold">142</span>
+      {/* Active Workout In Progress Banner */}
+      {activeWorkout && (
+        <div className="mb-6 p-4 sm:p-5 bg-surface border-2 border-primary rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-3 h-3 rounded-full bg-tag-green-text animate-ping" />
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-tag-green-text">
+                Live Workout In Progress
+              </span>
+              <h3 className="font-medium text-lg">
+                {activeWorkout.routine?.name || "Active Session"}
+              </h3>
+              <p className="text-xs opacity-70 mt-0.5">
+                {activeWorkout.exercises?.length || 0} exercises in progress
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/workout"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <span>Resume Workout</span>
+            <ArrowRight size={16} />
+          </Link>
         </div>
-        <div className="border border-border bg-surface p-4 rounded-lg flex flex-col gap-1">
-          <span className="text-sm font-medium opacity-70">Weekly Streak</span>
-          <span className="text-2xl font-semibold">3 weeks</span>
+      )}
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <div className="flex items-center gap-2 opacity-70 mb-1">
+            <Dumbbell size={16} />
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Total Workouts
+            </span>
+          </div>
+          <span className="text-3xl font-semibold tracking-tight">
+            {isLoadingSummary ? "--" : summary?.totalWorkouts ?? 0}
+          </span>
         </div>
-        <div className="border border-border bg-surface p-4 rounded-lg flex flex-col gap-1">
-          <span className="text-sm font-medium opacity-70">Total Volume</span>
-          <span className="text-2xl font-semibold">12,400 kg</span>
+
+        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <div className="flex items-center gap-2 opacity-70 mb-1">
+            <Flame size={16} className="text-tag-red-text" />
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Weekly Streak
+            </span>
+          </div>
+          <span className="text-3xl font-semibold tracking-tight">
+            {isLoadingSummary
+              ? "--"
+              : `${summary?.currentWeeklyStreak ?? 0} ${
+                  summary?.currentWeeklyStreak === 1 ? "week" : "weeks"
+                }`}
+          </span>
+        </div>
+
+        <div className="border border-border bg-surface p-5 rounded-2xl flex flex-col gap-1 shadow-sm">
+          <div className="flex items-center gap-2 opacity-70 mb-1">
+            <TrendingUp size={16} className="text-tag-green-text" />
+            <span className="text-xs font-medium uppercase tracking-wider">
+              Total Volume
+            </span>
+          </div>
+          <span className="text-3xl font-semibold tracking-tight">
+            {isLoadingSummary
+              ? "--"
+              : `${(summary?.totalVolume ?? 0).toLocaleString()} ${preferredUnit}`}
+          </span>
         </div>
       </div>
 
-      {/* Tags Demonstration */}
-      <section>
-        <h2 className="text-lg font-medium mb-4">Muscle Focus (Example Tags)</h2>
-        <div className="flex flex-wrap gap-2">
-          <span className="bg-tag-blue-bg text-tag-blue-text border border-border px-2 py-1 rounded-sm text-xs font-medium tracking-wide">
-            CHEST
-          </span>
-          <span className="bg-tag-green-bg text-tag-green-text border border-border px-2 py-1 rounded-sm text-xs font-medium tracking-wide">
-            LEGS
-          </span>
-          <span className="bg-tag-red-bg text-tag-red-text border border-border px-2 py-1 rounded-sm text-xs font-medium tracking-wide">
-            BACK
-          </span>
-          <span className="bg-tag-yellow-bg text-tag-yellow-text border border-border px-2 py-1 rounded-sm text-xs font-medium tracking-wide">
-            ARMS
-          </span>
+      {/* Quick Launch Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <Link
+          href="/workout"
+          className="p-5 bg-surface border border-border rounded-2xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:scale-105 transition-transform">
+              <Play size={20} fill="currentColor" />
+            </div>
+            <div>
+              <h3 className="font-medium text-base">Quick Session</h3>
+              <p className="text-xs opacity-70">Log an on-the-go workout</p>
+            </div>
+          </div>
+          <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+        </Link>
+
+        <Link
+          href="/routines"
+          className="p-5 bg-surface border border-border rounded-2xl hover:border-primary/50 transition-all flex items-center justify-between group shadow-sm"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:scale-105 transition-transform">
+              <List size={20} />
+            </div>
+            <div>
+              <h3 className="font-medium text-base">My Routines</h3>
+              <p className="text-xs opacity-70">Manage training splits</p>
+            </div>
+          </div>
+          <ChevronRight className="opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+        </Link>
+      </div>
+
+      {/* Muscle Focus / Volume Distribution */}
+      <section className="bg-surface border border-border p-6 rounded-2xl shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity size={18} className="opacity-70" />
+            <h2 className="text-base font-medium">Muscle Focus</h2>
+          </div>
+          <span className="text-xs opacity-50">Sets completed</span>
         </div>
+
+        {muscleEntries.length === 0 ? (
+          <p className="text-sm opacity-60">
+            Complete your first workout to see your targeted muscle breakdown.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {muscleEntries.map(([muscle, count], idx) => (
+              <span
+                key={muscle}
+                className={`border px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wider uppercase flex items-center gap-2 ${getTagStyle(
+                  idx
+                )}`}
+              >
+                <span>{muscle}</span>
+                <span className="opacity-70 font-normal">({count} sets)</span>
+              </span>
+            ))}
+          </div>
+        )}
       </section>
     </div>
+  );
+}
+
+function ChevronRight({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
   );
 }

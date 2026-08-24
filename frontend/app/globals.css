@@ -24,9 +24,32 @@
   --tag-yellow-text: #8F6B1E;
 }
 
+html.dark {
+  /* Odit Dark Theme - Warm Charcoal Aesthetic */
+  --background: #1C1A19;
+  --foreground: #E8E5E1;
+  
+  --border: #35322F;
+  --border-strong: #4F4A45;
+  
+  --primary: #D1CAC3;
+  --primary-foreground: #1C1A19;
+  
+  --surface: #252220;
+  
+  /* Darker, muted tags for Dark Mode */
+  --tag-green-bg: #1B3324;
+  --tag-green-text: #8ACFA7;
+  --tag-blue-bg: #19273C;
+  --tag-blue-text: #8AB4F8;
+  --tag-red-bg: #3B1B1B;
+  --tag-red-text: #F89494;
+  --tag-yellow-bg: #3A2C10;
+  --tag-yellow-text: #F3C469;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Odit Dark Theme - Warm Charcoal Aesthetic */
+  :root:not(.light) {
     --background: #1C1A19;
     --foreground: #E8E5E1;
     
@@ -38,7 +61,6 @@
     
     --surface: #252220;
     
-    /* Darker, muted tags for Dark Mode */
     --tag-green-bg: #1B3324;
     --tag-green-text: #8ACFA7;
     --tag-blue-bg: #19273C;
@@ -76,4 +98,5 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

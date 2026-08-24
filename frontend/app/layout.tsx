@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "../providers/QueryProvider";
+import { ThemeProvider } from "../providers/ThemeProvider";
 import { BottomNav } from "../components/layout/BottomNav";
 import { SideNav } from "../components/layout/SideNav";
 import { AuthGuard } from "../components/auth/AuthGuard";
@@ -44,16 +45,19 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-dvh flex flex-col md:flex-row bg-background text-foreground justify-center">
         <QueryProvider>
-          <AuthGuard>
-            <SideNav />
-            <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full border-x border-transparent md:border-border min-h-dvh shadow-sm shadow-border/10">
-              {children}
-            </main>
-            <BottomNav />
-          </AuthGuard>
+          <ThemeProvider>
+            <AuthGuard>
+              <SideNav />
+              <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full border-x border-transparent md:border-border min-h-dvh shadow-sm shadow-border/10">
+                {children}
+              </main>
+              <BottomNav />
+            </AuthGuard>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>
