@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -32,6 +32,7 @@ function WorkoutContent() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const routineIdFromUrl = searchParams.get("routineId");
+  const hasAutoStartedRef = useRef(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -90,6 +91,10 @@ function WorkoutContent() {
     onSuccess: (data) => {
       queryClient.setQueryData(["activeWorkout"], data);
       queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+      // Cleanly remove the query param so re-renders or finishes never re-trigger it
+      if (typeof window !== "undefined" && window.location.search) {
+        router.replace("/workout", { scroll: false });
+      }
     },
   });
 
@@ -159,12 +164,20 @@ function WorkoutContent() {
     },
   });
 
-  // Automatically start routine if passed via URL and no workout is active
+  // Automatically start routine if passed via URL and no workout is active (run only once)
   useEffect(() => {
-    if (routineIdFromUrl && !isLoadingActive && !activeWorkout && !startWorkoutMutation.isPending) {
+    if (
+      routineIdFromUrl &&
+      !isLoadingActive &&
+      !activeWorkout &&
+      !startWorkoutMutation.isPending &&
+      !completedSummary &&
+      !hasAutoStartedRef.current
+    ) {
+      hasAutoStartedRef.current = true;
       startWorkoutMutation.mutate(routineIdFromUrl);
     }
-  }, [routineIdFromUrl, isLoadingActive, activeWorkout]);
+  }, [routineIdFromUrl, isLoadingActive, activeWorkout, completedSummary]);
 
   // Live Timer computation
   useEffect(() => {
