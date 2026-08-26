@@ -372,32 +372,66 @@ export class AnalyticsService {
     }
 
     // 4. PROGRESSIVE OVERLOAD OPPORTUNITY
-    if (workouts.length >= 2) {
-      // Find an exercise completed in recent workouts with consistent reps
-      for (const w of workouts) {
-        let foundOverload = false;
-        for (const we of w.exercises) {
-          if (we.sets.length >= 2 && we.sets.every((s) => s.reps >= 8 && s.weight > 0)) {
-            const avgWeight = we.sets[0].weight;
-            const step = preferredUnit === 'lbs' ? 5 : 2.5;
-            const nextWeight = avgWeight + step;
+    // Group exercise instances across distinct completed workouts
+    const exerciseHistoryMap = new Map<
+      string,
+      {
+        exerciseId: string;
+        exerciseName: string;
+        sessions: {
+          workoutDate: Date;
+          sets: { weight: number; reps: number; isCompleted: boolean }[];
+        }[];
+      }
+    >();
 
-            insights.push({
-              id: `overload-${we.exercise.id}`,
-              type: 'PROGRESSION',
-              title: `Ready to Overload: ${we.exercise.name}`,
-              message: `You completed solid ${we.sets.length}-set volume on ${we.exercise.name} at ${avgWeight} ${preferredUnit}. On your next session, aim for ${nextWeight} ${preferredUnit} to trigger progressive overload.`,
-              actionText: 'Log Next Workout',
-              actionHref: '/workout',
-              priority: 'HIGH',
-              categoryIcon: 'trending-up',
-              badge: `+${step} ${preferredUnit}`,
-            });
-            foundOverload = true;
-            break;
-          }
+    for (const w of workouts) {
+      for (const we of w.exercises) {
+        if (!we.exercise?.id) continue;
+        const validSets = we.sets.filter(
+          (s) => s.isCompleted && s.weight > 0 && s.reps > 0
+        );
+        if (validSets.length === 0) continue;
+
+        if (!exerciseHistoryMap.has(we.exercise.id)) {
+          exerciseHistoryMap.set(we.exercise.id, {
+            exerciseId: we.exercise.id,
+            exerciseName: we.exercise.name,
+            sessions: [],
+          });
         }
-        if (foundOverload) break;
+        exerciseHistoryMap.get(we.exercise.id)!.sessions.push({
+          workoutDate: new Date(w.startedAt),
+          sets: validSets,
+        });
+      }
+    }
+
+    // Only suggest overload if the lifter has completed this specific exercise in at least 2 distinct workouts
+    for (const [exerciseId, history] of exerciseHistoryMap.entries()) {
+      if (history.sessions.length >= 2) {
+        const latestSession = history.sessions[0];
+
+        // Check if latest session demonstrated solid volume (>= 2 completed working sets with solid reps)
+        const solidSets = latestSession.sets.filter((s) => s.reps >= 8);
+        if (solidSets.length >= 2) {
+          const maxWeight = Math.max(...latestSession.sets.map((s) => s.weight));
+          const step = preferredUnit === 'lbs' ? 5 : 2.5;
+          const nextWeight = maxWeight + step;
+
+          insights.push({
+            id: `overload-${exerciseId}`,
+            type: 'PROGRESSION',
+            title: `Ready to Overload: ${history.exerciseName}`,
+            message: `You've logged ${history.exerciseName} across ${history.sessions.length} sessions, most recently completing ${latestSession.sets.length} working sets at ${maxWeight} ${preferredUnit}. On your next session, aim for ${nextWeight} ${preferredUnit} to drive progressive overload.`,
+            actionText: 'Log Next Workout',
+            actionHref: '/workout',
+            priority: 'HIGH',
+            categoryIcon: 'trending-up',
+            badge: `+${step} ${preferredUnit}`,
+          });
+          break; // Highlight primary overload candidate
+        }
       }
     }
 

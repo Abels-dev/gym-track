@@ -14,6 +14,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
             staleTime: 1000 * 60 * 5, // 5 minutes
+            networkMode: "offlineFirst",
+          },
+          mutations: {
+            networkMode: "offlineFirst",
           },
         },
       })
@@ -31,6 +35,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             setItem: async (key, value) => await set(key, value),
             removeItem: async (key) => await del(key),
           },
+          throttleTime: 1000,
         })
       );
     }

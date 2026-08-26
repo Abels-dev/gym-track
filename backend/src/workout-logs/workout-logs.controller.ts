@@ -48,9 +48,13 @@ export class WorkoutLogsController {
   addExercise(
     @CurrentUser() user: AuthPrincipal,
     @Param('id') workoutId: string,
-    @Body('exerciseId') exerciseId: string,
+    @Body('exerciseId') exerciseId?: string,
+    @Body('exerciseIds') exerciseIds?: string[],
   ) {
-    return this.workoutLogsService.addExerciseToWorkout(user.id, workoutId, exerciseId);
+    if (exerciseIds && Array.isArray(exerciseIds) && exerciseIds.length > 0) {
+      return this.workoutLogsService.addExercisesToWorkout(user.id, workoutId, exerciseIds);
+    }
+    return this.workoutLogsService.addExerciseToWorkout(user.id, workoutId, exerciseId!);
   }
 
   @Delete('exercises/:workoutExerciseId')

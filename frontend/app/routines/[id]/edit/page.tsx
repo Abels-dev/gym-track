@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Plus, Trash2, GripVertical } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Dumbbell } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "../../../../lib/api";
-import { cn } from "../../../../lib/utils";
-import { ExercisePicker } from "../../../../components/routines/ExercisePicker";
+import { ExercisePicker, Exercise } from "../../../../components/routines/ExercisePicker";
 import { PageLoader } from "../../../../components/ui/Loader";
 
 interface SelectedExercise {
@@ -48,8 +47,8 @@ export default function EditRoutinePage() {
           exerciseId: ex.exerciseId,
           name: ex.exercise.name,
           targetSets: ex.targetSets,
-          targetRepMin: ex.targetRepMin || 0,
-          targetRepMax: ex.targetRepMax || 0,
+          targetRepMin: ex.targetRepMin || 8,
+          targetRepMax: ex.targetRepMax || 12,
         }))
       );
     }
@@ -78,23 +77,20 @@ export default function EditRoutinePage() {
     },
   });
 
-  const handleAddExercise = (exercise: any) => {
+  const handleAddMultipleExercises = (newExercises: Exercise[]) => {
     setExercises((prev) => {
-      const exists = prev.find((ex) => ex.exerciseId === exercise.id);
-      if (exists) {
-        return prev.filter((ex) => ex.exerciseId !== exercise.id);
-      }
-      return [
-        ...prev,
-        {
+      const existingIds = new Set(prev.map((e) => e.exerciseId));
+      const additions = newExercises
+        .filter((ex) => !existingIds.has(ex.id))
+        .map((exercise) => ({
           id: crypto.randomUUID(),
           exerciseId: exercise.id,
           name: exercise.name,
           targetSets: 3,
           targetRepMin: 8,
           targetRepMax: 12,
-        },
-      ];
+        }));
+      return [...prev, ...additions];
     });
   };
 
@@ -117,107 +113,155 @@ export default function EditRoutinePage() {
   if (isLoading || !routine) return <PageLoader />;
 
   return (
-    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-5xl mx-auto w-full relative">
-      <header className="flex items-center justify-between pb-6 mb-6 border-b border-border sticky top-0 bg-background z-10 pt-4">
-        <div className="flex items-center gap-4">
-          <Link href={`/routines/${routineId}`} className="p-2 -ml-2 rounded-md hover:bg-border/50 transition-colors">
-            <ChevronLeft size={24} />
-          </Link>
-          <h1 className="text-2xl font-light tracking-tight">Edit Routine</h1>
-        </div>
-        <button
-          onClick={handleSubmit}
-          disabled={!name || exercises.length === 0 || updateMutation.isPending}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+    <div className="flex flex-col flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-4xl mx-auto w-full pb-24">
+      {/* Top Navigation */}
+      <div className="flex items-center gap-3 mb-6">
+        <Link
+          href={`/routines/${routineId}`}
+          className="p-2 -ml-2 text-foreground/60 hover:text-foreground hover:bg-border/40 rounded-xl transition-colors"
         >
-          {updateMutation.isPending ? "Saving..." : "Save Changes"}
-        </button>
+          <ChevronLeft size={20} />
+        </Link>
+        <span className="text-xs uppercase tracking-wider font-semibold opacity-60">
+          Back to Routine
+        </span>
+      </div>
+
+      <header className="mb-8">
+        <h1 className="text-3xl font-light tracking-tight">Edit Routine</h1>
+        <p className="text-sm opacity-70 mt-1">
+          Adjust movement targets, target rep ranges, and exercises
+        </p>
       </header>
 
-      <form className="space-y-8 pb-20">
-        <section className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Details */}
+        <section className="bg-surface border border-border p-6 rounded-2xl shadow-sm space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider opacity-60">
+            1. Routine Details
+          </h2>
+
           <div>
-            <label className="block text-sm font-medium mb-1">Routine Name</label>
+            <label className="block text-xs font-medium uppercase tracking-wider opacity-70 mb-1.5">
+              Routine Name *
+            </label>
             <input
               type="text"
               required
-              placeholder="e.g., Push Day, Full Body"
+              placeholder="e.g., Push Day (Chest & Triceps)"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-surface border border-border rounded-md focus:outline-none focus:border-primary transition-colors text-lg font-medium"
+              className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition-colors"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium mb-1 opacity-70">Description (Optional)</label>
-            <input
-              type="text"
-              placeholder="e.g., Focus on chest and triceps"
+            <label className="block text-xs font-medium uppercase tracking-wider opacity-70 mb-1.5">
+              Description (Optional)
+            </label>
+            <textarea
+              rows={2}
+              placeholder="e.g., Focus on progressive overload on bench press and tricep extension"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 bg-surface border border-border rounded-md focus:outline-none focus:border-primary transition-colors text-sm"
+              className="w-full px-4 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition-colors resize-none"
             />
           </div>
         </section>
 
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium">Exercises</h2>
-            <span className="text-sm opacity-50">{exercises.length} selected</span>
+        {/* Exercises Section */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider opacity-60">
+              2. Exercises ({exercises.length})
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus size={14} />
+              <span>Add Exercise</span>
+            </button>
           </div>
 
-          <div className="space-y-3 mb-6">
+          {exercises.length === 0 && (
+            <div className="p-8 border border-dashed border-border rounded-2xl text-center bg-surface/50">
+              <Dumbbell size={32} className="mx-auto opacity-30 mb-2" />
+              <p className="text-sm font-medium">No exercises added yet</p>
+              <p className="text-xs opacity-60 mt-0.5">
+                Add exercises to define target sets and rep brackets for this routine
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-3">
             {exercises.map((ex, idx) => (
-              <div key={ex.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-surface border border-border rounded-xl">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="cursor-grab opacity-50 hover:opacity-100 hidden sm:block">
-                    <GripVertical size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-xs font-semibold opacity-50 mr-2">{idx + 1}</span>
-                    <span className="font-medium">{ex.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeExercise(ex.id)}
-                    className="p-2 text-tag-red-text hover:bg-tag-red-bg rounded-md transition-colors sm:hidden"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-                
+              <div
+                key={ex.id}
+                className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-border/40 flex items-center justify-center text-xs font-bold shrink-0">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-sm sm:text-base">{ex.name}</h3>
+                  </div>
+                </div>
+
+                {/* Target Configuration inputs */}
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs opacity-60">Sets:</label>
                     <input
                       type="number"
+                      min="1"
+                      max="20"
                       value={ex.targetSets}
-                      onChange={(e) => updateExercise(ex.id, { targetSets: parseInt(e.target.value) || 0 })}
-                      className="w-16 px-2 py-1.5 bg-background border border-border rounded text-center text-sm font-medium"
+                      onChange={(e) =>
+                        updateExercise(ex.id, {
+                          targetSets: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-14 px-2 py-1 bg-background border border-border rounded-lg text-xs text-center font-medium"
                     />
-                    <span className="text-xs font-medium opacity-50">Sets</span>
                   </div>
-                  <div className="flex items-center gap-1">
+
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs opacity-60">Reps:</label>
                     <input
                       type="number"
+                      min="1"
                       value={ex.targetRepMin}
-                      onChange={(e) => updateExercise(ex.id, { targetRepMin: parseInt(e.target.value) || 0 })}
-                      className="w-12 px-2 py-1.5 bg-background border border-border rounded text-center text-sm font-medium"
+                      onChange={(e) =>
+                        updateExercise(ex.id, {
+                          targetRepMin: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-12 px-2 py-1 bg-background border border-border rounded-lg text-xs text-center font-medium"
                     />
-                    <span className="opacity-50">-</span>
+                    <span className="text-xs opacity-40">-</span>
                     <input
                       type="number"
+                      min="1"
                       value={ex.targetRepMax}
-                      onChange={(e) => updateExercise(ex.id, { targetRepMax: parseInt(e.target.value) || 0 })}
-                      className="w-12 px-2 py-1.5 bg-background border border-border rounded text-center text-sm font-medium"
+                      onChange={(e) =>
+                        updateExercise(ex.id, {
+                          targetRepMax: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-12 px-2 py-1 bg-background border border-border rounded-lg text-xs text-center font-medium"
                     />
-                    <span className="text-xs font-medium opacity-50 ml-1">Reps</span>
                   </div>
-                  
+
                   <button
                     type="button"
                     onClick={() => removeExercise(ex.id)}
-                    className="p-2 text-tag-red-text hover:bg-tag-red-bg rounded-md transition-colors hidden sm:block ml-2"
+                    className="p-1.5 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors ml-2"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -233,12 +277,29 @@ export default function EditRoutinePage() {
             Add Exercise
           </button>
         </section>
+
+        {/* Submit */}
+        <div className="pt-4 border-t border-border flex justify-end gap-3">
+          <Link
+            href={`/routines/${routineId}`}
+            className="px-5 py-2.5 border border-border bg-surface rounded-xl text-sm font-medium hover:bg-border/30 transition-colors"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={updateMutation.isPending || exercises.length === 0}
+            className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium shadow-md shadow-primary/20 hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </form>
 
       {isPickerOpen && (
         <ExercisePicker
           onClose={() => setIsPickerOpen(false)}
-          onSelect={handleAddExercise}
+          onSelectMultiple={handleAddMultipleExercises}
           selectedIds={exercises.map((e) => e.exerciseId)}
         />
       )}

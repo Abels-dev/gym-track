@@ -9,6 +9,7 @@ import { AuthGuard } from "../components/auth/AuthGuard";
 import { SyncStatusBadge } from "../components/ui/SyncStatusBadge";
 import { InstallPwaBanner } from "../components/ui/InstallPwaBanner";
 import { RestTimer } from "../components/workout/RestTimer";
+import { ServiceWorkerRegister } from "../components/providers/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Gym Track",
   description: "Track your workouts, log sets, and view analytics offline.",
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon-192x192.png",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -53,6 +58,7 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col md:flex-row bg-background text-foreground">
         <QueryProvider>
           <ThemeProvider>
+            <ServiceWorkerRegister />
             <AuthGuard>
               <SyncStatusBadge />
               <InstallPwaBanner />

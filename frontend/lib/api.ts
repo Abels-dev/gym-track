@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
+  timeout: 7000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -39,9 +40,18 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Detect offline / network failure for mutations (POST, PATCH, DELETE, PUT)
-    const isNetworkError = !error.response || error.code === 'ERR_NETWORK' || (typeof navigator !== 'undefined' && !navigator.onLine);
-    const isModifyingMethod = originalRequest && ['post', 'patch', 'delete', 'put'].includes(originalRequest.method?.toLowerCase());
+    // Detect offline / network failure / timeout for mutations (POST, PATCH, DELETE, PUT)
+    const isNetworkError =
+      !error.response ||
+      error.code === 'ERR_NETWORK' ||
+      error.code === 'ECONNABORTED' ||
+      error.message?.includes('timeout') ||
+      (typeof navigator !== 'undefined' && !navigator.onLine);
+    const isModifyingMethod =
+      originalRequest &&
+      ['post', 'patch', 'delete', 'put'].includes(
+        originalRequest.method?.toLowerCase()
+      );
 
     if (isNetworkError && isModifyingMethod && !originalRequest.headers?.['X-Offline-Synced']) {
       try {

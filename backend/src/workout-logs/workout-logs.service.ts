@@ -159,6 +159,10 @@ export class WorkoutLogsService {
   }
 
   async addExerciseToWorkout(userId: string, workoutId: string, exerciseId: string) {
+    return this.addExercisesToWorkout(userId, workoutId, [exerciseId]);
+  }
+
+  async addExercisesToWorkout(userId: string, workoutId: string, exerciseIds: string[]) {
     const workout = await this.prisma.workoutLog.findFirst({
       where: { id: workoutId, userId, endedAt: null },
       include: { exercises: true },
@@ -168,24 +172,30 @@ export class WorkoutLogsService {
       throw new NotFoundException('Active workout not found');
     }
 
-    const order = workout.exercises.length;
+    let currentOrder = workout.exercises.length;
+    const created: any[] = [];
 
-    return this.prisma.workoutExercise.create({
-      data: {
-        workoutLogId: workoutId,
-        exerciseId,
-        order,
-        sets: {
-          create: [
-            { setNumber: 1, weight: 0, reps: 0, isCompleted: false },
-          ],
+    for (const exerciseId of exerciseIds) {
+      const we = await this.prisma.workoutExercise.create({
+        data: {
+          workoutLogId: workoutId,
+          exerciseId,
+          order: currentOrder++,
+          sets: {
+            create: [
+              { setNumber: 1, weight: 0, reps: 0, isCompleted: false },
+            ],
+          },
         },
-      },
-      include: {
-        exercise: true,
-        sets: { orderBy: { setNumber: 'asc' } },
-      },
-    });
+        include: {
+          exercise: true,
+          sets: { orderBy: { setNumber: 'asc' } },
+        },
+      });
+      created.push(we);
+    }
+
+    return created;
   }
 
   async removeExerciseFromWorkout(userId: string, workoutExerciseId: string) {

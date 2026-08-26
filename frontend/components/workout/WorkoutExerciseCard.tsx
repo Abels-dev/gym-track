@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Plus, Trash2, Dumbbell, MoreVertical, History, Info } from "lucide-react";
 import { apiClient } from "../../lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,9 +66,9 @@ export function WorkoutExerciseCard({
   });
 
   // Sync local sets when props update
-  useState(() => {
+  useEffect(() => {
     setLocalSets(workoutExercise.sets);
-  });
+  }, [workoutExercise.sets]);
 
   const updateSetMutation = useMutation({
     mutationFn: async ({
@@ -133,23 +133,19 @@ export function WorkoutExerciseCard({
     const nextCompleted = !set.isCompleted;
     handleSetChange(set.id, "isCompleted", nextCompleted);
 
-    updateSetMutation.mutate(
-      {
-        setId: set.id,
-        data: {
-          weight: set.weight,
-          reps: set.reps,
-          isCompleted: nextCompleted,
-        },
+    // Trigger rest timer immediately and synchronously for zero perceived latency
+    if (nextCompleted) {
+      onSetCompleted(workoutExercise.restSeconds || 90);
+    }
+
+    updateSetMutation.mutate({
+      setId: set.id,
+      data: {
+        weight: set.weight,
+        reps: set.reps,
+        isCompleted: nextCompleted,
       },
-      {
-        onSuccess: () => {
-          if (nextCompleted) {
-            onSetCompleted(workoutExercise.restSeconds || 90);
-          }
-        },
-      }
-    );
+    });
   };
 
   return (
