@@ -7,7 +7,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
-  const port = configService.getOrThrow<number>('PORT');
+  
+  // Azure App Service / Container dynamically sets process.env.PORT (defaults to 8080 or config)
+  const port = process.env.PORT ? Number(process.env.PORT) : (configService.get<number>('PORT') || 8080);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -18,7 +20,8 @@ async function bootstrap() {
   app.enableCors();
   app.enableShutdownHooks();
 
-  await app.listen(port);
-  logger.log(`Application is running on port ${port}`);
+  // Listen on 0.0.0.0 for Azure Linux container / App Service compatibility
+  await app.listen(port, '0.0.0.0');
+  logger.log(`Application is running on port ${port} (host: 0.0.0.0)`);
 }
 bootstrap();
