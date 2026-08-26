@@ -3,10 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, List, Play, History, Dumbbell, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "../../lib/api";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 export function SideNav() {
   const pathname = usePathname();
+
+  const { data: activeWorkout } = useQuery({
+    queryKey: ["activeWorkout"],
+    queryFn: async () => {
+      try {
+        const { data } = await apiClient.get("/workouts/active");
+        return data;
+      } catch (err: any) {
+        if (err.response?.status === 404) return null;
+        throw err;
+      }
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: false,
+  });
 
   const navItems = [
     { name: "Home", href: "/", icon: LayoutDashboard },
@@ -27,19 +45,27 @@ export function SideNav() {
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
             const isReallyActive = item.href === "/" ? pathname === "/" : isActive;
+            const isWorkoutItem = item.name === "Workout";
 
             return (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isReallyActive
                       ? "bg-primary text-primary-foreground font-medium"
                       : "text-foreground opacity-70 hover:bg-border/50 hover:opacity-100"
                   }`}
                 >
-                  <item.icon size={20} strokeWidth={isReallyActive ? 2.5 : 2} />
-                  <span className="text-sm tracking-wide">{item.name}</span>
+                  <div className="flex items-center gap-4">
+                    <item.icon size={20} strokeWidth={isReallyActive ? 2.5 : 2} />
+                    <span className="text-sm tracking-wide">{item.name}</span>
+                  </div>
+                  {isWorkoutItem && activeWorkout && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-tag-green-bg text-tag-green-text border border-tag-green-text/20 animate-pulse">
+                      Live
+                    </span>
+                  )}
                 </Link>
               </li>
             );

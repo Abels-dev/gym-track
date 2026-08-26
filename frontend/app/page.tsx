@@ -19,17 +19,21 @@ import { WeeklyConsistencyRing } from "../components/analytics/WeeklyConsistency
 import { VolumeTrendChart } from "../components/analytics/VolumeTrendChart";
 import { MuscleSplitDonut } from "../components/analytics/MuscleSplitDonut";
 import { CoachInsightsCard } from "../components/analytics/CoachInsightsCard";
+import { RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Home() {
   const user = useAuthStore((state) => state.user);
+  const queryClient = useQueryClient();
 
   // 1. Fetch Analytics Summary
-  const { data: summary, isLoading: isLoadingSummary } = useQuery({
+  const { data: summary, isLoading: isLoadingSummary, isRefetching: isRefetchingSummary } = useQuery({
     queryKey: ["analytics", "summary"],
     queryFn: async () => {
       const { data } = await apiClient.get("/analytics/summary");
       return data;
     },
+    refetchOnMount: "always",
   });
 
   // 2. Fetch Muscle Distribution
@@ -39,6 +43,7 @@ export default function Home() {
       const { data } = await apiClient.get("/analytics/muscle-distribution");
       return data;
     },
+    refetchOnMount: "always",
   });
 
   // 3. Fetch User Profile
@@ -50,8 +55,8 @@ export default function Home() {
     },
   });
 
-  // 4. Check Active Workout
-  const { data: activeWorkout } = useQuery({
+  // 4. Check Active Workout (Immediate freshness)
+  const { data: activeWorkout, isRefetching: isRefetchingActive } = useQuery({
     queryKey: ["activeWorkout"],
     queryFn: async () => {
       try {
@@ -62,10 +67,20 @@ export default function Home() {
         throw err;
       }
     },
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 
   const preferredUnit = profile?.preferredUnit || "kg";
+  const isRefreshing = isRefetchingSummary || isRefetchingActive;
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+    queryClient.invalidateQueries({ queryKey: ["analytics"] });
+    queryClient.invalidateQueries({ queryKey: ["workoutHistory"] });
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+  };
 
   return (
     <div className="flex flex-col flex-1 bg-background text-foreground min-h-screen p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-28">
@@ -79,13 +94,22 @@ export default function Home() {
             {user?.fullName || "Dashboard"}
           </h1>
         </div>
-        <Link
-          href="/workout"
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-medium text-sm shadow-md shadow-primary/20 hover:scale-[1.02] transition-all"
-        >
-          <Play size={16} fill="currentColor" />
-          <span>Start Workout</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            title="Refresh dashboard data"
+            className="p-2.5 bg-surface border border-border hover:bg-border/30 rounded-xl text-foreground/70 hover:text-foreground transition-colors"
+          >
+            <RefreshCw size={16} className={isRefreshing ? "animate-spin text-primary" : ""} />
+          </button>
+          <Link
+            href="/workout"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-medium text-sm shadow-md shadow-primary/20 hover:scale-[1.02] transition-all"
+          >
+            <Play size={16} fill="currentColor" />
+            <span>Start Workout</span>
+          </Link>
+        </div>
       </header>
 
       {/* Active Workout In Progress Banner */}

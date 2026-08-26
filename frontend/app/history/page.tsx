@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Flame,
   ArrowUpRight,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "../../lib/api";
@@ -45,16 +46,25 @@ export default function HistoryPage() {
   const {
     data: historyLogs,
     isLoading: isLoadingHistory,
+    isRefetching: isRefetchingHistory,
+    refetch: refetchHistory,
   } = useQuery({
     queryKey: ["workoutHistory"],
     queryFn: async () => {
       const { data } = await apiClient.get("/workouts");
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // 3. Fetch PRs
-  const { data: prs, isLoading: isLoadingPrs } = useQuery<
+  const {
+    data: prs,
+    isLoading: isLoadingPrs,
+    isRefetching: isRefetchingPrs,
+    refetch: refetchPrs,
+  } = useQuery<
     { exerciseName: string; maxWeight: number }[]
   >({
     queryKey: ["prs"],
@@ -62,6 +72,7 @@ export default function HistoryPage() {
       const { data } = await apiClient.get("/analytics/prs");
       return data;
     },
+    refetchOnMount: "always",
   });
 
   // 4. Delete Log Mutation
@@ -137,29 +148,45 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        {/* Tab Toggle */}
-        <div className="flex bg-surface border border-border p-1 rounded-xl gap-1 self-start sm:self-auto">
+        {/* Actions & Tab Toggle */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              activeTab === "history"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-foreground opacity-60 hover:opacity-100"
-            }`}
+            onClick={() => {
+              refetchHistory();
+              refetchPrs();
+            }}
+            title="Refresh history"
+            className="p-2.5 bg-surface border border-border hover:bg-border/30 rounded-xl text-foreground/70 hover:text-foreground transition-colors"
           >
-            Workout Logs
+            <RefreshCw
+              size={15}
+              className={isRefetchingHistory || isRefetchingPrs ? "animate-spin text-primary" : ""}
+            />
           </button>
-          <button
-            onClick={() => setActiveTab("prs")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              activeTab === "prs"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-foreground opacity-60 hover:opacity-100"
-            }`}
-          >
-            <Trophy size={14} />
-            <span>Personal Records</span>
-          </button>
+
+          <div className="flex bg-surface border border-border p-1 rounded-xl gap-1">
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                activeTab === "history"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground opacity-60 hover:opacity-100"
+              }`}
+            >
+              Workout Logs
+            </button>
+            <button
+              onClick={() => setActiveTab("prs")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+                activeTab === "prs"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-foreground opacity-60 hover:opacity-100"
+              }`}
+            >
+              <Trophy size={14} />
+              <span>Personal Records</span>
+            </button>
+          </div>
         </div>
       </header>
 

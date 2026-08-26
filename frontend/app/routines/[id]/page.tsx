@@ -24,6 +24,8 @@ export default function RoutineDetailPage() {
       const { data } = await apiClient.get(`/routines/${routineId}`);
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const deleteMutation = useMutation({
@@ -43,7 +45,8 @@ export default function RoutineDetailPage() {
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(["activeWorkout"], data);
       queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
       router.push("/workout");
     },

@@ -19,6 +19,7 @@ import {
   Layers,
   ArrowRight,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { apiClient } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Loader";
@@ -51,12 +52,19 @@ export default function RoutinesPage() {
   const [startingTemplateId, setStartingTemplateId] = useState<string | null>(null);
   const [successSavedName, setSuccessSavedName] = useState<string | null>(null);
 
-  const { data: routines, isLoading } = useQuery<Routine[]>({
+  const {
+    data: routines,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = useQuery<Routine[]>({
     queryKey: ["routines"],
     queryFn: async () => {
       const { data } = await apiClient.get("/routines");
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Helper to clone a template into user's personal routines
@@ -66,10 +74,24 @@ export default function RoutinesPage() {
     for (let i = 0; i < day.exercises.length; i++) {
       const ex = day.exercises[i];
       try {
-        const { data } = await apiClient.get(
+        // 1. Direct search with full name
+        let { data } = await apiClient.get(
           `/exercises?search=${encodeURIComponent(ex.name)}&limit=1`
         );
-        const matched = data.data?.[0];
+        let matched = data.data?.[0];
+
+        // 2. Fallback search by stripping equipment prefixes or punctuation
+        if (!matched) {
+          const simplified = ex.name
+            .replace(/^(barbell|dumbbell|cable|bodyweight|machine|sled)\s+/i, "")
+            .replace(/[-()]/g, " ")
+            .trim();
+          const fallbackRes = await apiClient.get(
+            `/exercises?search=${encodeURIComponent(simplified)}&limit=1`
+          );
+          matched = fallbackRes.data?.data?.[0];
+        }
+
         if (matched) {
           exercisesPayload.push({
             exerciseId: matched.id,
@@ -147,6 +169,13 @@ export default function RoutinesPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => refetch()}
+            title="Refresh routines"
+            className="p-2.5 bg-surface border border-border hover:bg-border/30 rounded-xl text-foreground/70 hover:text-foreground transition-colors"
+          >
+            <RefreshCw size={15} className={isRefetching ? "animate-spin text-primary" : ""} />
+          </button>
           <Link
             href="/routines/new"
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity shadow-sm"
@@ -184,9 +213,6 @@ export default function RoutinesPage() {
         >
           <Sparkles size={16} className={activeTab === "templates" ? "text-primary-foreground" : "text-tag-yellow-text"} />
           <span>Starter Templates</span>
-          <span className="px-1.5 py-0.2 text-[10px] uppercase font-bold tracking-wider rounded-md bg-tag-yellow-bg text-tag-yellow-text">
-            Pro
-          </span>
         </button>
       </div>
 

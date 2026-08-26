@@ -136,8 +136,12 @@ function WorkoutContent() {
         totalExercisesCount: data.exercises?.length || 0,
       });
 
+      // Clear active workout from client cache immediately
+      queryClient.setQueryData(["activeWorkout"], null);
       queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+      queryClient.invalidateQueries({ queryKey: ["workoutHistory"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["prs"] });
     },
   });
 
@@ -432,6 +436,11 @@ function WorkoutContent() {
           totalExercisesCount={completedSummary.totalExercisesCount}
           preferredUnit={preferredUnit}
           onDone={() => {
+            queryClient.setQueryData(["activeWorkout"], null);
+            queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+            queryClient.invalidateQueries({ queryKey: ["workoutHistory"] });
+            queryClient.invalidateQueries({ queryKey: ["analytics"] });
+            queryClient.invalidateQueries({ queryKey: ["prs"] });
             setCompletedSummary(null);
             router.push("/");
           }}
