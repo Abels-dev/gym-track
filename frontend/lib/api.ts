@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { syncQueue } from './syncQueue';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_URL = "https://gym-track-api-gmczheendfbzddg5.italynorth-01.azurewebsites.net/";
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -16,11 +16,11 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().accessToken;
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
@@ -28,32 +28,37 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401s and queue offline mutations
+// Response interceptor to handle 401s and only queue workout set logs when explicitly offline
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized -> Clear auth state
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
       return Promise.reject(error);
     }
 
-    // Detect offline / network failure / timeout for mutations (POST, PATCH, DELETE, PUT)
-    const isNetworkError =
-      !error.response ||
-      error.code === 'ERR_NETWORK' ||
-      error.code === 'ECONNABORTED' ||
-      error.message?.includes('timeout') ||
-      (typeof navigator !== 'undefined' && !navigator.onLine);
-    const isModifyingMethod =
-      originalRequest &&
+    // NEVER queue auth, profile, or query requests into offline sync queue
+    const isAuthOrConfigEndpoint =
+      originalRequest?.url?.includes('/auth/') ||
+      originalRequest?.url?.includes('/exercises') ||
+      originalRequest?.url?.includes('/profile');
+
+    if (isAuthOrConfigEndpoint) {
+      return Promise.reject(error);
+    }
+
+    // Only queue workouts/exercises set updates if strictly offline
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const isWorkoutMutation =
+      originalRequest?.url?.includes('/workouts') &&
       ['post', 'patch', 'delete', 'put'].includes(
-        originalRequest.method?.toLowerCase()
+        originalRequest?.method?.toLowerCase() || ''
       );
 
-    if (isNetworkError && isModifyingMethod && !originalRequest.headers?.['X-Offline-Synced']) {
+    if (isOffline && isWorkoutMutation && !originalRequest.headers?.['X-Offline-Synced']) {
       try {
         await syncQueue.enqueue({
           url: originalRequest.url || '',
@@ -61,7 +66,6 @@ apiClient.interceptors.response.use(
           data: originalRequest.data ? JSON.parse(typeof originalRequest.data === 'string' ? originalRequest.data : JSON.stringify(originalRequest.data)) : undefined,
         });
 
-        // Return an optimistic mock response so UI does not crash
         return Promise.resolve({
           data: originalRequest.data || { success: true, offline: true },
           status: 200,
@@ -70,7 +74,7 @@ apiClient.interceptors.response.use(
           config: originalRequest,
         });
       } catch (queueErr) {
-        console.error('Failed to queue offline mutation', queueErr);
+        console.error('Failed to queue offline workout update', queueErr);
       }
     }
 

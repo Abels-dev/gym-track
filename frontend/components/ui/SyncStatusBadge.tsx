@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { WifiOff, RefreshCw, CheckCircle2 } from "lucide-react";
 import { syncQueue } from "../../lib/syncQueue";
+import { useAuthStore } from "../../store/authStore";
 
 export function SyncStatusBadge() {
+  const pathname = usePathname();
+  const token = useAuthStore((state) => state.accessToken);
+
   const [status, setStatus] = useState({
     isOnline: true,
     isSyncing: false,
@@ -37,6 +42,17 @@ export function SyncStatusBadge() {
       unsubscribe();
     };
   }, []);
+
+  // Do not show on auth pages or when not logged in
+  const isAuthPage =
+    pathname?.startsWith("/login") ||
+    pathname?.startsWith("/register") ||
+    pathname?.startsWith("/forgot-password") ||
+    pathname?.startsWith("/setup-profile");
+
+  if (isAuthPage || !token) {
+    return null;
+  }
 
   // When fully online and not syncing, only display if the temporary success banner is active
   if (status.isOnline && !status.isSyncing && !showSyncedSuccess) {
