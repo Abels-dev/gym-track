@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Plus, Trash2, Dumbbell, MoreVertical, History, Info } from "lucide-react";
+import { Check, Plus, Trash2, Dumbbell, Info } from "lucide-react";
 import { apiClient } from "../../lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ConfirmModal } from "../ui/ConfirmModal";
@@ -80,17 +80,80 @@ export function WorkoutExerciseCard({
     }) => {
       await apiClient.patch(`/workouts/sets/${setId}`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+    onMutate: async ({ setId, data }) => {
+      // Optimistically update React Query cache immediately for offline resilience
+      queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+        if (!oldWorkout?.exercises) return oldWorkout;
+        return {
+          ...oldWorkout,
+          exercises: oldWorkout.exercises.map((ex: any) => {
+            if (ex.id !== workoutExercise.id) return ex;
+            return {
+              ...ex,
+              sets: ex.sets.map((s: any) =>
+                s.id === setId ? { ...s, ...data } : s
+              ),
+            };
+          }),
+        };
+      });
     },
   });
 
   const addSetMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post(`/workouts/exercises/${workoutExercise.id}/sets`);
+      const { data } = await apiClient.post(
+        `/workouts/exercises/${workoutExercise.id}/sets`
+      );
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+    onMutate: async () => {
+      const tempId = crypto.randomUUID();
+      const nextSetNumber = localSets.length + 1;
+      const lastWeight = localSets[localSets.length - 1]?.weight || 0;
+      const lastReps = localSets[localSets.length - 1]?.reps || 0;
+      const newSet: WorkoutSet = {
+        id: tempId,
+        setNumber: nextSetNumber,
+        weight: lastWeight,
+        reps: lastReps,
+        isCompleted: false,
+      };
+
+      setLocalSets((prev) => [...prev, newSet]);
+
+      queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+        if (!oldWorkout?.exercises) return oldWorkout;
+        return {
+          ...oldWorkout,
+          exercises: oldWorkout.exercises.map((ex: any) => {
+            if (ex.id !== workoutExercise.id) return ex;
+            return {
+              ...ex,
+              sets: [...(ex.sets || []), newSet],
+            };
+          }),
+        };
+      });
+    },
+    onSuccess: (data) => {
+      if (data?.id) {
+        queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+          if (!oldWorkout?.exercises) return oldWorkout;
+          return {
+            ...oldWorkout,
+            exercises: oldWorkout.exercises.map((ex: any) => {
+              if (ex.id !== workoutExercise.id) return ex;
+              return {
+                ...ex,
+                sets: ex.sets.map((s: any, idx: number) =>
+                  idx === ex.sets.length - 1 ? { ...s, id: data.id } : s
+                ),
+              };
+            }),
+          };
+        });
+      }
     },
   });
 
@@ -98,8 +161,22 @@ export function WorkoutExerciseCard({
     mutationFn: async (setId: string) => {
       await apiClient.delete(`/workouts/sets/${setId}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+    onMutate: async (setId: string) => {
+      setLocalSets((prev) => prev.filter((s) => s.id !== setId));
+
+      queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+        if (!oldWorkout?.exercises) return oldWorkout;
+        return {
+          ...oldWorkout,
+          exercises: oldWorkout.exercises.map((ex: any) => {
+            if (ex.id !== workoutExercise.id) return ex;
+            return {
+              ...ex,
+              sets: ex.sets.filter((s: any) => s.id !== setId),
+            };
+          }),
+        };
+      });
     },
   });
 
@@ -107,8 +184,16 @@ export function WorkoutExerciseCard({
     mutationFn: async () => {
       await apiClient.delete(`/workouts/exercises/${workoutExercise.id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+    onMutate: async () => {
+      queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+        if (!oldWorkout?.exercises) return oldWorkout;
+        return {
+          ...oldWorkout,
+          exercises: oldWorkout.exercises.filter(
+            (ex: any) => ex.id !== workoutExercise.id
+          ),
+        };
+      });
     },
   });
 
@@ -120,6 +205,23 @@ export function WorkoutExerciseCard({
     setLocalSets((prev) =>
       prev.map((s) => (s.id === setId ? { ...s, [field]: value } : s))
     );
+
+    // Save directly to query cache so tab-switching while offline preserves unsaved input
+    queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+      if (!oldWorkout?.exercises) return oldWorkout;
+      return {
+        ...oldWorkout,
+        exercises: oldWorkout.exercises.map((ex: any) => {
+          if (ex.id !== workoutExercise.id) return ex;
+          return {
+            ...ex,
+            sets: ex.sets.map((s: any) =>
+              s.id === setId ? { ...s, [field]: value } : s
+            ),
+          };
+        }),
+      };
+    });
   };
 
   const handleSetBlur = (setId: string, field: keyof WorkoutSet, value: any) => {
@@ -191,6 +293,7 @@ export function WorkoutExerciseCard({
             <Info size={18} />
           </button>
           <button
+            type="button"
             onClick={() => setShowDeleteConfirm(true)}
             title="Remove exercise"
             className="p-2 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors"
@@ -295,7 +398,6 @@ export function WorkoutExerciseCard({
                       className="w-full px-2.5 py-1.5 bg-background border border-border rounded-lg text-sm font-medium focus:outline-none focus:border-primary transition-colors text-center"
                     />
                   </td>
-
 
                   {/* Checkbox Complete */}
                   <td className="py-2 px-2 text-center">

@@ -15,11 +15,13 @@ export interface QueuedMutation {
   retryCount: number;
 }
 
-type SyncListener = (status: {
+export interface SyncStatus {
   isOnline: boolean;
   isSyncing: boolean;
   pendingCount: number;
-}) => void;
+}
+
+type SyncListener = (status: SyncStatus) => void;
 
 class SyncQueueManager {
   private listeners: Set<SyncListener> = new Set();
@@ -27,7 +29,6 @@ class SyncQueueManager {
 
   constructor() {
     if (typeof window !== "undefined") {
-      // Clean up any stale or non-workout mutations from existing storage
       this.cleanupQueue();
 
       window.addEventListener("online", () => {
@@ -76,10 +77,10 @@ class SyncQueueManager {
     try {
       const queue = await this.getQueue();
       const now = Date.now();
-      // Only keep genuine workout set mutations less than 12 hours old
+      // Only keep genuine workout set mutations less than 24 hours old
       const valid = queue.filter((item) => {
         const isAuth = item.url.includes("/auth/");
-        const isOld = now - item.timestamp > 12 * 60 * 60 * 1000;
+        const isOld = now - item.timestamp > 24 * 60 * 60 * 1000;
         const isTooManyRetries = item.retryCount >= 3;
         return !isAuth && !isOld && !isTooManyRetries;
       });
@@ -95,27 +96,47 @@ class SyncQueueManager {
   async enqueue(
     mutation: Omit<QueuedMutation, "id" | "timestamp" | "retryCount">
   ): Promise<QueuedMutation | null> {
-    // Never enqueue authentication or non-workout routes
+    // Never enqueue authentication or profile routes
     if (mutation.url.includes("/auth/") || mutation.url.includes("/profile")) {
       return null;
     }
 
     const queue = await this.getQueue();
-    const item: QueuedMutation = {
-      ...mutation,
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      retryCount: 0,
-    };
 
-    queue.push(item);
+    // If this is a PATCH to the exact same URL (e.g. same set update), merge/overwrite data
+    let existingIndex = -1;
+    if (mutation.method === "PATCH") {
+      existingIndex = queue.findIndex(
+        (item) => item.method === "PATCH" && item.url === mutation.url
+      );
+    }
+
+    if (existingIndex !== -1) {
+      queue[existingIndex] = {
+        ...queue[existingIndex],
+        data: {
+          ...(queue[existingIndex].data || {}),
+          ...(mutation.data || {}),
+        },
+        timestamp: Date.now(),
+      };
+    } else {
+      const item: QueuedMutation = {
+        ...mutation,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        retryCount: 0,
+      };
+      queue.push(item);
+    }
+
     await this.saveQueue(queue);
 
     if (this.isOnline()) {
       this.flushQueue();
     }
 
-    return item;
+    return queue[existingIndex !== -1 ? existingIndex : queue.length - 1];
   }
 
   async remove(id: string): Promise<void> {
@@ -127,7 +148,6 @@ class SyncQueueManager {
   async flushQueue(): Promise<{ syncedCount: number; failedCount: number }> {
     const token = useAuthStore.getState().accessToken;
 
-    // Do not attempt background sync if not logged in or currently syncing or offline
     if (this.isSyncing || !this.isOnline() || !token) {
       return { syncedCount: 0, failedCount: 0 };
     }
@@ -143,7 +163,6 @@ class SyncQueueManager {
       const remaining: QueuedMutation[] = [];
 
       for (const item of queue) {
-        // Discard any auth items that were somehow queued
         if (item.url.includes("/auth/")) {
           continue;
         }
@@ -192,7 +211,7 @@ class SyncQueueManager {
 
   private async notify() {
     const queue = await this.getQueue();
-    const status = {
+    const status: SyncStatus = {
       isOnline: this.isOnline(),
       isSyncing: this.isSyncing,
       pendingCount: queue.length,

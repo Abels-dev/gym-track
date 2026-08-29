@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { WorkoutLogsService } from './workout-logs.service';
 import { CreateWorkoutLogDto } from './dto/create-workout-log.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
+import { FinishWorkoutDto } from './dto/finish-workout.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthPrincipal } from '../auth/auth.types';
@@ -40,8 +41,12 @@ export class WorkoutLogsController {
   }
 
   @Patch(':id/finish')
-  finishWorkout(@CurrentUser() user: AuthPrincipal, @Param('id') id: string) {
-    return this.workoutLogsService.finishWorkout(user.id, id);
+  finishWorkout(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('id') id: string,
+    @Body() dto?: FinishWorkoutDto,
+  ) {
+    return this.workoutLogsService.finishWorkout(user.id, id, dto);
   }
 
   @Post(':id/exercises')

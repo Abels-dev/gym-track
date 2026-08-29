@@ -2,38 +2,41 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { WifiOff, RefreshCw, CheckCircle2 } from "lucide-react";
-import { syncQueue } from "../../lib/syncQueue";
+import { CloudOff, Check } from "lucide-react";
+import { syncQueue, SyncStatus } from "../../lib/syncQueue";
 import { useAuthStore } from "../../store/authStore";
 
 export function SyncStatusBadge() {
   const pathname = usePathname();
   const token = useAuthStore((state) => state.accessToken);
 
-  const [status, setStatus] = useState({
+  const [status, setStatus] = useState<SyncStatus>({
     isOnline: true,
     isSyncing: false,
     pendingCount: 0,
   });
-  const [showSyncedSuccess, setShowSyncedSuccess] = useState(false);
+  const [showSyncedBriefly, setShowSyncedBriefly] = useState(false);
 
   useEffect(() => {
-    let prevSyncing = false;
-    let prevPending = 0;
+    let wasOffline = false;
     let timer: NodeJS.Timeout | null = null;
 
     const unsubscribe = syncQueue.subscribe((newStatus) => {
-      // If we just finished syncing queued items
-      if (prevSyncing && !newStatus.isSyncing && newStatus.isOnline && prevPending > 0) {
-        setShowSyncedSuccess(true);
+      // If we were offline and are now back online, show brief reassurance
+      if (wasOffline && newStatus.isOnline) {
+        setShowSyncedBriefly(true);
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
-          setShowSyncedSuccess(false);
-        }, 2500);
+          setShowSyncedBriefly(false);
+        }, 2200);
       }
 
-      prevSyncing = newStatus.isSyncing;
-      prevPending = newStatus.pendingCount;
+      if (!newStatus.isOnline) {
+        wasOffline = true;
+      } else if (!newStatus.isSyncing && newStatus.pendingCount === 0) {
+        wasOffline = false;
+      }
+
       setStatus(newStatus);
     });
 
@@ -43,7 +46,6 @@ export function SyncStatusBadge() {
     };
   }, []);
 
-  // Do not show on auth pages or when not logged in
   const isAuthPage =
     pathname?.startsWith("/login") ||
     pathname?.startsWith("/register") ||
@@ -54,39 +56,30 @@ export function SyncStatusBadge() {
     return null;
   }
 
-  // When fully online and not syncing, only display if the temporary success banner is active
-  if (status.isOnline && !status.isSyncing && !showSyncedSuccess) {
+  // 100% invisible during normal online operation
+  if (status.isOnline && !showSyncedBriefly) {
     return null;
   }
 
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-none">
-      <div className="flex items-center gap-2 px-3.5 py-1.5 bg-surface/95 backdrop-blur-md border border-border shadow-lg rounded-full text-xs font-medium pointer-events-auto">
+    <div className="fixed top-3 right-4 sm:right-6 z-50 animate-in fade-in slide-in-from-top-1 duration-200 pointer-events-none">
+      <div
+        className={`flex items-center gap-1.5 px-3 py-1 backdrop-blur-md border rounded-full text-xs font-medium shadow-md transition-all ${
+          !status.isOnline
+            ? "bg-amber-500/10 border-amber-500/30 text-amber-500 dark:text-amber-400"
+            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+        }`}
+      >
         {!status.isOnline ? (
           <>
-            <WifiOff size={14} className="text-tag-yellow-text animate-pulse" />
-            <span className="text-tag-yellow-text font-semibold">
-              Offline Mode
-            </span>
-            {status.pendingCount > 0 && (
-              <span className="opacity-60 text-[11px]">
-                ({status.pendingCount} {status.pendingCount === 1 ? "change" : "changes"} saved locally)
-              </span>
-            )}
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <CloudOff size={13} className="shrink-0" />
+            <span>Offline • Saved locally</span>
           </>
-        ) : status.isSyncing ? (
+        ) : showSyncedBriefly ? (
           <>
-            <RefreshCw size={14} className="text-primary animate-spin" />
-            <span className="text-primary font-semibold">
-              Syncing {status.pendingCount} {status.pendingCount === 1 ? "change" : "changes"}...
-            </span>
-          </>
-        ) : showSyncedSuccess ? (
-          <>
-            <CheckCircle2 size={14} className="text-tag-green-text" />
-            <span className="text-tag-green-text font-semibold">
-              All changes synced
-            </span>
+            <Check size={13} className="shrink-0" />
+            <span>Synced</span>
           </>
         ) : null}
       </div>

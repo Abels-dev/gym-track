@@ -116,8 +116,14 @@ function WorkoutContent() {
   const finishWorkoutMutation = useMutation({
     mutationFn: async () => {
       if (!activeWorkout) return;
+      const endedAt = new Date().toISOString();
+      const durationSeconds = elapsedSeconds;
       const { data } = await apiClient.patch(
-        `/workouts/${activeWorkout.id}/finish`
+        `/workouts/${activeWorkout.id}/finish`,
+        {
+          endedAt,
+          durationSeconds,
+        }
       );
       return data;
     },

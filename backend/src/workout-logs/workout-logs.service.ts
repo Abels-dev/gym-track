@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkoutLogDto } from './dto/create-workout-log.dto';
 import { UpdateSetDto } from './dto/update-set.dto';
+import { FinishWorkoutDto } from './dto/finish-workout.dto';
 
 @Injectable()
 export class WorkoutLogsService {
@@ -110,7 +111,7 @@ export class WorkoutLogsService {
     return activeWorkout;
   }
 
-  async finishWorkout(userId: string, id: string) {
+  async finishWorkout(userId: string, id: string, dto?: FinishWorkoutDto) {
     const workout = await this.prisma.workoutLog.findFirst({
       where: { id, userId },
     });
@@ -118,8 +119,18 @@ export class WorkoutLogsService {
     if (!workout) throw new NotFoundException(`Workout ${id} not found`);
     if (workout.endedAt) throw new BadRequestException('Workout is already finished');
 
-    const endedAt = new Date();
-    const durationSeconds = Math.floor((endedAt.getTime() - workout.startedAt.getTime()) / 1000);
+    let endedAt = new Date();
+    if (dto?.endedAt) {
+      const parsed = new Date(dto.endedAt);
+      if (!isNaN(parsed.getTime())) {
+        endedAt = parsed;
+      }
+    }
+
+    let durationSeconds = dto?.durationSeconds;
+    if (durationSeconds === undefined || durationSeconds === null || durationSeconds < 0) {
+      durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - workout.startedAt.getTime()) / 1000));
+    }
 
     return this.prisma.workoutLog.update({
       where: { id },
