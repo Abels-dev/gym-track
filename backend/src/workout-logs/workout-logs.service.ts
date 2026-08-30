@@ -224,6 +224,37 @@ export class WorkoutLogsService {
     });
   }
 
+  async completeExerciseSets(userId: string, workoutExerciseId: string) {
+    const workoutExercise = await this.prisma.workoutExercise.findUnique({
+      where: { id: workoutExerciseId },
+      include: {
+        workoutLog: true,
+        sets: true,
+      },
+    });
+
+    if (!workoutExercise || workoutExercise.workoutLog.userId !== userId || workoutExercise.workoutLog.endedAt !== null) {
+      throw new NotFoundException('Workout exercise not found or session ended');
+    }
+
+    if (!workoutExercise.sets || workoutExercise.sets.length === 0) {
+      throw new BadRequestException('Exercise has no sets to complete. Please add at least one set first.');
+    }
+
+    await this.prisma.setLog.updateMany({
+      where: { workoutExerciseId },
+      data: { isCompleted: true },
+    });
+
+    return this.prisma.workoutExercise.findUnique({
+      where: { id: workoutExerciseId },
+      include: {
+        exercise: true,
+        sets: { orderBy: { setNumber: 'asc' } },
+      },
+    });
+  }
+
   async addSetToExercise(userId: string, workoutExerciseId: string) {
     const workoutExercise = await this.prisma.workoutExercise.findUnique({
       where: { id: workoutExerciseId },

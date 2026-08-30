@@ -70,6 +70,14 @@ export class WorkoutLogsController {
     return this.workoutLogsService.removeExerciseFromWorkout(user.id, workoutExerciseId);
   }
 
+  @Patch('exercises/:workoutExerciseId/complete-all')
+  completeExercise(
+    @CurrentUser() user: AuthPrincipal,
+    @Param('workoutExerciseId') workoutExerciseId: string,
+  ) {
+    return this.workoutLogsService.completeExerciseSets(user.id, workoutExerciseId);
+  }
+
   @Post('exercises/:workoutExerciseId/sets')
   addSet(
     @CurrentUser() user: AuthPrincipal,

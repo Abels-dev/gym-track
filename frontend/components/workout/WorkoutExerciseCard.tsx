@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, Plus, Trash2, Dumbbell, Info } from "lucide-react";
+import { Check, CheckCheck, Plus, Trash2, Dumbbell, Info, AlertCircle } from "lucide-react";
 import { apiClient } from "../../lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ConfirmModal } from "../ui/ConfirmModal";
@@ -50,7 +50,12 @@ export function WorkoutExerciseCard({
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [localSets, setLocalSets] = useState<WorkoutSet[]>(workoutExercise.sets);
+
+  const hasSets = localSets.length > 0;
+  const allCompleted = hasSets && localSets.every((s) => s.isCompleted);
+  const completedCount = localSets.filter((s) => s.isCompleted).length;
 
   // Fetch previous session performance for this exercise
   const { data: previousSets } = useQuery<
@@ -99,6 +104,61 @@ export function WorkoutExerciseCard({
       });
     },
   });
+
+  const completeExerciseMutation = useMutation({
+    mutationFn: async () => {
+      if (localSets.length === 0) {
+        throw new Error("No sets to complete");
+      }
+      const { data } = await apiClient.patch(
+        `/workouts/exercises/${workoutExercise.id}/complete-all`
+      );
+      return data;
+    },
+    onMutate: async () => {
+      // 1. Optimistically mark all sets completed locally
+      setLocalSets((prev) => prev.map((s) => ({ ...s, isCompleted: true })));
+
+      // 2. Optimistically update React Query active workout cache
+      queryClient.setQueryData(["activeWorkout"], (oldWorkout: any) => {
+        if (!oldWorkout?.exercises) return oldWorkout;
+        return {
+          ...oldWorkout,
+          exercises: oldWorkout.exercises.map((ex: any) => {
+            if (ex.id !== workoutExercise.id) return ex;
+            return {
+              ...ex,
+              sets: (ex.sets || []).map((s: any) => ({
+                ...s,
+                isCompleted: true,
+              })),
+            };
+          }),
+        };
+      });
+
+      // 3. Start the rest timer for seamless inter-exercise flow
+      onSetCompleted(workoutExercise.restSeconds || 90);
+    },
+    onError: (err: any) => {
+      console.warn("Complete all sets error", err);
+    },
+  });
+
+  const handleCompleteAll = () => {
+    if (localSets.length === 0) {
+      setErrorMessage("Cannot complete exercise: Please add at least one set first.");
+      setTimeout(() => {
+        setErrorMessage((prev) =>
+          prev === "Cannot complete exercise: Please add at least one set first." ? null : prev
+        );
+      }, 4500);
+      return;
+    }
+
+    setErrorMessage(null);
+    completeExerciseMutation.mutate();
+  };
 
   const addSetMutation = useMutation({
     mutationFn: async () => {
@@ -251,9 +311,15 @@ export function WorkoutExerciseCard({
   };
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-sm">
+    <div
+      className={`bg-surface border transition-all duration-300 rounded-2xl p-4 sm:p-5 shadow-sm ${
+        allCompleted
+          ? "border-tag-green-text/40 bg-tag-green-bg/[0.04] shadow-tag-green-text/5"
+          : "border-border"
+      }`}
+    >
       {/* Exercise Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-background border border-border rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
             {workoutExercise.exercise.imageUrl ? (
@@ -283,7 +349,51 @@ export function WorkoutExerciseCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* Header Action Buttons */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {/* Complete Exercise Button */}
+          {hasSets ? (
+            <button
+              type="button"
+              onClick={handleCompleteAll}
+              disabled={allCompleted || completeExerciseMutation.isPending}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                allCompleted
+                  ? "bg-tag-green-bg text-tag-green-text border border-tag-green-text/30 shadow-sm cursor-default"
+                  : "bg-surface border border-border hover:border-primary/50 text-foreground/80 hover:text-primary active:scale-95 shadow-sm"
+              }`}
+              title={
+                allCompleted
+                  ? "All sets completed"
+                  : "Complete all remaining sets for this exercise"
+              }
+            >
+              {allCompleted ? (
+                <>
+                  <Check size={14} strokeWidth={2.5} />
+                  <span>Completed</span>
+                </>
+              ) : (
+                <>
+                  <CheckCheck size={15} className="text-primary" />
+                  <span>
+                    Complete All ({completedCount}/{localSets.length})
+                  </span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCompleteAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-surface border border-dashed border-border text-foreground/50 hover:border-tag-red-text/40 hover:text-tag-red-text transition-colors"
+              title="Complete exercise"
+            >
+              <CheckCheck size={15} />
+              <span>Complete Exercise</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowInfoModal(true)}
@@ -302,6 +412,23 @@ export function WorkoutExerciseCard({
           </button>
         </div>
       </div>
+
+      {/* Error Alert Message */}
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-tag-red-bg/80 text-tag-red-text border border-tag-red-text/30 rounded-xl text-xs flex items-center justify-between gap-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0" />
+            <span className="font-medium">{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="p-1 hover:opacity-70 font-bold transition-opacity"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Sets Table */}
       <div className="overflow-x-auto">
