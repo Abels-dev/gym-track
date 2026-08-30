@@ -37,46 +37,25 @@ jobs:
 
       - name: Generate Prisma Client
         working-directory: backend
-        run: |
-          echo "========== PRISMA GENERATE =========="
-          npx prisma generate
+        run: npx prisma generate
 
-          echo
-          echo "========== PRISMA CLIENT =========="
-          ls -la node_modules/.prisma/client
-
-          echo
-          echo "========== DEFAULT.JS =========="
-          test -f node_modules/.prisma/client/default.js
-          ls -l node_modules/.prisma/client/default.js
-
-      - name: Build NestJS Application
+      - name: Build NestJS
         working-directory: backend
-        run: |
-          echo "========== NEST BUILD =========="
-          npm run build
-
-          echo
-          echo "========== BUILD OUTPUT =========="
-          find dist -maxdepth 4 -type f | sort
-
-          echo
-          echo "========== MAIN.JS =========="
-          test -f dist/src/main.js
-          ls -l dist/src/main.js
+        run: npm run build
 
       - name: Prepare deployment package
         run: |
-          echo "========== PREPARING DEPLOYMENT PACKAGE =========="
-
           rm -rf deploy
-          mkdir -p deploy
+          mkdir deploy
 
           cp -r backend/dist deploy/dist
-          cp -r backend/node_modules deploy/node_modules
           cp -r backend/prisma deploy/prisma
           cp backend/package.json deploy/package.json
           cp backend/package-lock.json deploy/package-lock.json
+
+          if [ -f backend/prisma.config.ts ]; then
+            cp backend/prisma.config.ts deploy/prisma.config.ts
+          fi
 
           if [ -f backend/cleaned-exercises.json ]; then
             cp backend/cleaned-exercises.json deploy/cleaned-exercises.json
@@ -84,33 +63,12 @@ jobs:
 
       - name: Verify deployment package
         run: |
-          echo "========== DEPLOYMENT ROOT =========="
-          ls -la deploy
-
-          echo
-          echo "========== MAIN.JS =========="
           test -f deploy/dist/src/main.js
-          ls -l deploy/dist/src/main.js
+          test -f deploy/package.json
+          test -f deploy/package-lock.json
 
-          echo
-          echo "========== NESTJS =========="
-          test -d deploy/node_modules/@nestjs/core
-          echo "@nestjs/core exists"
-
-          echo
-          echo "========== PRISMA =========="
-          test -d deploy/node_modules/.prisma/client
-          echo ".prisma/client exists"
-
-          echo
-          echo "========== PRISMA DEFAULT =========="
-          test -f deploy/node_modules/.prisma/client/default.js
-          ls -l deploy/node_modules/.prisma/client/default.js
-
-          echo
-          echo "========== FINAL PACKAGE =========="
-          du -sh deploy
-          echo "Deployment package is ready."
+          echo "===== DEPLOYMENT PACKAGE ====="
+          find deploy -maxdepth 3 -type f | sort
 
       - name: Upload deployment artifact
         uses: actions/upload-artifact@v4
@@ -132,39 +90,7 @@ jobs:
           name: node-app
           path: deploy
 
-      - name: Verify downloaded artifact
-        run: |
-          echo "========== DOWNLOADED ARTIFACT =========="
-
-          echo
-          echo "========== ROOT =========="
-          ls -la deploy
-
-          echo
-          echo "========== MAIN.JS =========="
-          test -f deploy/dist/src/main.js
-          ls -l deploy/dist/src/main.js
-
-          echo
-          echo "========== NESTJS =========="
-          test -d deploy/node_modules/@nestjs/core
-          echo "@nestjs/core exists"
-
-          echo
-          echo "========== PRISMA =========="
-          test -d deploy/node_modules/.prisma/client
-          echo ".prisma/client exists"
-
-          echo
-          echo "========== PRISMA DEFAULT =========="
-          test -f deploy/node_modules/.prisma/client/default.js
-          ls -l deploy/node_modules/.prisma/client/default.js
-
-          echo
-          echo "All required files exist."
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: Deploy to Azure
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
