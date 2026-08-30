@@ -23,6 +23,12 @@ export interface SyncStatus {
 
 type SyncListener = (status: SyncStatus) => void;
 
+let globalQueryClient: any = null;
+
+export const setSyncQueryClient = (client: any) => {
+  globalQueryClient = client;
+};
+
 class SyncQueueManager {
   private listeners: Set<SyncListener> = new Set();
   private isSyncing = false;
@@ -77,7 +83,6 @@ class SyncQueueManager {
     try {
       const queue = await this.getQueue();
       const now = Date.now();
-      // Only keep genuine workout set mutations less than 24 hours old
       const valid = queue.filter((item) => {
         const isAuth = item.url.includes("/auth/");
         const isOld = now - item.timestamp > 24 * 60 * 60 * 1000;
@@ -178,7 +183,6 @@ class SyncQueueManager {
           });
           syncedCount++;
         } catch (error: any) {
-          // If server returned 4xx (client error / invalid resource), discard
           if (error.response && error.response.status >= 400 && error.response.status < 500) {
             console.warn(`Discarding invalid queued mutation ${item.url}`, error);
             failedCount++;
@@ -193,6 +197,14 @@ class SyncQueueManager {
       }
 
       await this.saveQueue(remaining);
+
+      // Once all queued items are successfully posted to server, refresh queries
+      if (syncedCount > 0 && globalQueryClient) {
+        globalQueryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
+        globalQueryClient.invalidateQueries({ queryKey: ["workoutHistory"] });
+        globalQueryClient.invalidateQueries({ queryKey: ["analytics"] });
+        globalQueryClient.invalidateQueries({ queryKey: ["prs"] });
+      }
     } finally {
       this.isSyncing = false;
       this.notify();

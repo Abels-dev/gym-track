@@ -115,40 +115,51 @@ function WorkoutContent() {
   // 6. Finish Workout Mutation
   const finishWorkoutMutation = useMutation({
     mutationFn: async () => {
-      if (!activeWorkout) return;
+      if (!activeWorkout) return null;
       const endedAt = new Date().toISOString();
       const durationSeconds = elapsedSeconds;
-      const { data } = await apiClient.patch(
-        `/workouts/${activeWorkout.id}/finish`,
-        {
-          endedAt,
-          durationSeconds,
-        }
-      );
-      return data;
-    },
-    onSuccess: (data) => {
-      // Calculate summary metrics
+
+      // Calculate summary metrics directly from activeWorkout client state
       let totalVol = 0;
       let completedSets = 0;
-      data.exercises?.forEach((ex: any) => {
+      activeWorkout.exercises?.forEach((ex: any) => {
         ex.sets?.forEach((s: any) => {
           if (s.isCompleted) {
             completedSets += 1;
-            totalVol += (s.weight || 0) * (s.reps || 0);
+            totalVol += (Number(s.weight) || 0) * (Number(s.reps) || 0);
           }
         });
       });
 
-      setCompletedSummary({
-        durationSeconds: data.durationSeconds || elapsedSeconds,
+      const summary = {
+        durationSeconds: durationSeconds,
         totalVolume: totalVol,
         completedSetsCount: completedSets,
-        totalExercisesCount: data.exercises?.length || 0,
-      });
+        totalExercisesCount: activeWorkout.exercises?.length || 0,
+      };
+
+      try {
+        await apiClient.patch(
+          `/workouts/${activeWorkout.id}/finish`,
+          {
+            endedAt,
+            durationSeconds,
+          }
+        );
+      } catch (err) {
+        console.warn("Offline or failed finish request, enqueued in syncQueue", err);
+      }
+
+      return summary;
+    },
+    onSuccess: (summary) => {
+      if (!summary) return;
+
+      setCompletedSummary(summary);
 
       // Clear active workout from client cache immediately
       queryClient.setQueryData(["activeWorkout"], null);
+      queryClient.removeQueries({ queryKey: ["activeWorkout"] });
       queryClient.invalidateQueries({ queryKey: ["activeWorkout"] });
       queryClient.invalidateQueries({ queryKey: ["workoutHistory"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });

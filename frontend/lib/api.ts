@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { syncQueue } from './syncQueue';
 
-const API_URL = "https://gym-track-api-gmczheendfbzddg5.italynorth-01.azurewebsites.net/";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -28,7 +28,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401s and only queue workout set logs when explicitly offline
+// Response interceptor to handle 401s and queue workout mutations when offline or network drops
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -50,20 +50,30 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Only queue workouts/exercises set updates if strictly offline
+    // Check if offline or network connection dropped
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const isNetworkError =
+      !error.response ||
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ERR_NETWORK' ||
+      error.message === 'Network Error';
+
     const isWorkoutMutation =
       originalRequest?.url?.includes('/workouts') &&
       ['post', 'patch', 'delete', 'put'].includes(
         originalRequest?.method?.toLowerCase() || ''
       );
 
-    if (isOffline && isWorkoutMutation && !originalRequest.headers?.['X-Offline-Synced']) {
+    if ((isOffline || isNetworkError) && isWorkoutMutation && !originalRequest.headers?.['X-Offline-Synced']) {
       try {
         await syncQueue.enqueue({
           url: originalRequest.url || '',
           method: originalRequest.method.toUpperCase() as any,
-          data: originalRequest.data ? JSON.parse(typeof originalRequest.data === 'string' ? originalRequest.data : JSON.stringify(originalRequest.data)) : undefined,
+          data: originalRequest.data
+            ? (typeof originalRequest.data === 'string'
+                ? JSON.parse(originalRequest.data)
+                : originalRequest.data)
+            : undefined,
         });
 
         return Promise.resolve({
@@ -81,4 +91,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-

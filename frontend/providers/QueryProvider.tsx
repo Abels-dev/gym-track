@@ -5,6 +5,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { get, set, del } from "idb-keyval";
 import { useState, useEffect } from "react";
+import { setSyncQueryClient } from "../lib/syncQueue";
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -15,6 +16,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
             staleTime: 1000 * 60 * 5, // 5 minutes
             networkMode: "offlineFirst",
+            refetchOnReconnect: false, // Prevents race condition: syncQueue flushes before queries refetch
           },
           mutations: {
             networkMode: "offlineFirst",
@@ -26,7 +28,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [persister, setPersister] = useState<any>(null);
 
   useEffect(() => {
-    // Only run on the client side
+    // Connect QueryClient to SyncQueue so successful flushes trigger cache invalidation
+    setSyncQueryClient(queryClient);
+
     if (typeof window !== "undefined") {
       setPersister(
         createAsyncStoragePersister({
@@ -39,7 +43,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         })
       );
     }
-  }, []);
+  }, [queryClient]);
 
   if (!persister) {
     // Render without persistence while hydrating/loading on server

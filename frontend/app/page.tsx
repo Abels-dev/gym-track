@@ -30,32 +30,45 @@ export default function Home() {
   const { data: summary, isLoading: isLoadingSummary, isRefetching: isRefetchingSummary } = useQuery({
     queryKey: ["analytics", "summary"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/analytics/summary");
-      return data;
+      try {
+        const { data } = await apiClient.get("/analytics/summary");
+        return data;
+      } catch (err: any) {
+        if (!navigator.onLine) return null;
+        throw err;
+      }
     },
-    refetchOnMount: "always",
   });
 
   // 2. Fetch Muscle Distribution
   const { data: muscleDist } = useQuery<Record<string, number>>({
     queryKey: ["analytics", "muscle-distribution"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/analytics/muscle-distribution");
-      return data;
+      try {
+        const { data } = await apiClient.get("/analytics/muscle-distribution");
+        return data;
+      } catch (err: any) {
+        if (!navigator.onLine) return {};
+        throw err;
+      }
     },
-    refetchOnMount: "always",
   });
 
   // 3. Fetch User Profile
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/profile");
-      return data;
+      try {
+        const { data } = await apiClient.get("/profile");
+        return data;
+      } catch (err: any) {
+        if (!navigator.onLine) return null;
+        throw err;
+      }
     },
   });
 
-  // 4. Check Active Workout (Immediate freshness)
+  // 4. Check Active Workout
   const { data: activeWorkout, isRefetching: isRefetchingActive } = useQuery({
     queryKey: ["activeWorkout"],
     queryFn: async () => {
@@ -63,12 +76,10 @@ export default function Home() {
         const { data } = await apiClient.get("/workouts/active");
         return data;
       } catch (err: any) {
-        if (err.response?.status === 404) return null;
-        throw err;
+        if (err.response?.status === 404 || !navigator.onLine) return null;
+        return null;
       }
     },
-    staleTime: 0,
-    refetchOnMount: "always",
     retry: false,
   });
 
