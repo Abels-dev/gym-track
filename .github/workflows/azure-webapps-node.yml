@@ -43,18 +43,14 @@ jobs:
         working-directory: backend
         run: npm run build
 
-      - name: Prune dev dependencies
-        working-directory: backend
-        run: npm prune --omit=dev
-
       - name: Prepare deployment package
         run: |
           mkdir -p deploy
 
           cp -r backend/dist deploy/dist
-          cp -r backend/node_modules deploy/node_modules
           cp -r backend/prisma deploy/prisma
           cp backend/package.json deploy/package.json
+          cp backend/package-lock.json deploy/package-lock.json
 
           if [ -f backend/cleaned-exercises.json ]; then
             cp backend/cleaned-exercises.json deploy/cleaned-exercises.json
@@ -81,7 +77,6 @@ jobs:
           path: deploy
 
       - name: Deploy to Azure Web App
-        id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
