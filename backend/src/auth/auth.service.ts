@@ -5,8 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { Prisma } from '../../generated/prisma';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -196,6 +195,6 @@ export class AuthService {
   }
 
   private isUniqueEmailError(error: unknown): boolean {
-    return error instanceof PrismaClientKnownRequestError && error.code === 'P2002';
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
   }
 }

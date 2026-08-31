@@ -6,7 +6,7 @@ import {
   Max, 
   Min 
 } from 'class-validator';
-import { Unit, FitnessGoal, ExperienceLevel, Equipment } from '@prisma/client';
+import { Unit, FitnessGoal, ExperienceLevel, Equipment } from '../../../generated/prisma';
 
 export class CreateProfileDto {
   @IsEnum(Unit)

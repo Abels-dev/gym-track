@@ -54,6 +54,10 @@ jobs:
           cp backend/package.json deploy/package.json
           cp backend/package-lock.json deploy/package-lock.json
 
+          if [ -d backend/generated ]; then
+            cp -r backend/generated deploy/generated
+          fi
+
           if [ -f backend/prisma.config.ts ]; then
             cp backend/prisma.config.ts deploy/prisma.config.ts
           fi
@@ -68,8 +72,7 @@ jobs:
           test -f deploy/package.json
           test -f deploy/package-lock.json
           test -d deploy/node_modules/@nestjs/core
-          test -d deploy/node_modules/.prisma/client
-          test -f deploy/node_modules/.prisma/client/default.js || test -f deploy/node_modules/.prisma/client/index.js
+          test -d deploy/generated/prisma || test -d deploy/dist/generated/prisma
 
           echo "===== DEPLOYMENT PACKAGE ====="
           find deploy -maxdepth 3 -type d | sort
