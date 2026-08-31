@@ -43,10 +43,6 @@ jobs:
         working-directory: backend
         run: npm run build
 
-      - name: Prune dev dependencies
-        working-directory: backend
-        run: npm prune --omit=dev
-
       - name: Prepare deployment package
         run: |
           rm -rf deploy
@@ -73,6 +69,7 @@ jobs:
           test -f deploy/package-lock.json
           test -d deploy/node_modules/@nestjs/core
           test -d deploy/node_modules/.prisma/client
+          test -f deploy/node_modules/.prisma/client/default.js || test -f deploy/node_modules/.prisma/client/index.js
 
           echo "===== DEPLOYMENT PACKAGE ====="
           find deploy -maxdepth 3 -type d | sort
