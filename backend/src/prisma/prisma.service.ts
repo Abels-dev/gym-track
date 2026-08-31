@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '../../generated/prisma';
+import { PrismaClient } from '../generated/prisma';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
 function createPrismaAdapter(databaseUrl: string) {

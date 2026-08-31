@@ -72,7 +72,7 @@ jobs:
           test -f deploy/package.json
           test -f deploy/package-lock.json
           test -d deploy/node_modules/@nestjs/core
-          test -d deploy/generated/prisma || test -d deploy/dist/generated/prisma
+          test -d deploy/dist/src/generated/prisma
 
           echo "===== DEPLOYMENT PACKAGE ====="
           find deploy -maxdepth 3 -type d | sort
