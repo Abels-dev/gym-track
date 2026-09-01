@@ -17,6 +17,7 @@ import {
   Flame,
   ArrowUpRight,
   RefreshCw,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "../../lib/api";
@@ -149,14 +150,14 @@ export default function HistoryPage() {
         </div>
 
         {/* Actions & Tab Toggle */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <button
             onClick={() => {
               refetchHistory();
               refetchPrs();
             }}
             title="Refresh history"
-            className="p-2.5 bg-surface border border-border hover:bg-border/30 rounded-xl text-foreground/70 hover:text-foreground transition-colors"
+            className="p-2.5 bg-surface border border-border hover:bg-border/30 rounded-xl text-foreground/70 hover:text-foreground transition-colors shrink-0"
           >
             <RefreshCw
               size={15}
@@ -164,10 +165,10 @@ export default function HistoryPage() {
             />
           </button>
 
-          <div className="flex bg-surface border border-border p-1 rounded-xl gap-1">
+          <div className="flex bg-surface border border-border p-1 rounded-xl gap-1 shrink-0">
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                 activeTab === "history"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-foreground opacity-60 hover:opacity-100"
@@ -177,7 +178,7 @@ export default function HistoryPage() {
             </button>
             <button
               onClick={() => setActiveTab("prs")}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-medium transition-all ${
                 activeTab === "prs"
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-foreground opacity-60 hover:opacity-100"
@@ -221,17 +222,17 @@ export default function HistoryPage() {
                 return (
                   <div
                     key={log.id}
-                    className="bg-surface border border-border hover:border-primary/30 rounded-2xl p-5 shadow-sm transition-all"
+                    className="bg-surface border border-border hover:border-primary/30 rounded-2xl p-4 sm:p-5 shadow-sm transition-all"
                   >
                     {/* Log Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-tag-blue-text bg-tag-blue-bg border border-tag-blue-text/20 px-2 py-0.5 rounded-md">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-tag-blue-text bg-tag-blue-bg border border-tag-blue-text/20 px-2 py-0.5 rounded-md truncate max-w-[200px] sm:max-w-xs">
                             {log.routine?.name || "Quick Session"}
                           </span>
                         </div>
-                        <h3 className="font-medium text-base sm:text-lg">
+                        <h3 className="font-medium text-base sm:text-lg truncate">
                           {dateObj.toLocaleDateString(undefined, {
                             weekday: "short",
                             month: "short",
@@ -241,14 +242,14 @@ export default function HistoryPage() {
                         </h3>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           onClick={() =>
                             repeatWorkoutMutation.mutate(log.routineId || undefined)
                           }
                           disabled={repeatWorkoutMutation.isPending}
                           title="Repeat this workout"
-                          className="flex items-center gap-1 px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg text-xs font-medium transition-all"
+                          className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg text-xs font-medium transition-all"
                         >
                           <Play size={12} fill="currentColor" />
                           <span className="hidden sm:inline">Repeat</span>
@@ -256,7 +257,7 @@ export default function HistoryPage() {
                         <button
                           onClick={() => setDeleteTargetId(log.id)}
                           title="Delete workout log"
-                          className="p-1.5 text-foreground/30 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors"
+                          className="p-1.5 text-foreground/40 hover:text-tag-red-text hover:bg-tag-red-bg rounded-lg transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -264,29 +265,32 @@ export default function HistoryPage() {
                     </div>
 
                     {/* Stats Strip */}
-                    <div className="grid grid-cols-3 gap-2 py-3 px-3 bg-background border border-border rounded-xl text-xs mb-3">
-                      <div className="flex flex-col">
-                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px]">
-                          Duration
+                    <div className="grid grid-cols-3 gap-2 py-2.5 px-3 sm:px-4 bg-background/80 border border-border rounded-xl text-xs mb-3">
+                      <div className="flex flex-col min-w-0">
+                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px] flex items-center gap-1 truncate">
+                          <Clock size={11} className="shrink-0 text-primary" />
+                          <span>Duration</span>
                         </span>
-                        <span className="font-semibold text-sm">
+                        <span className="font-semibold text-xs sm:text-sm truncate mt-0.5">
                           {formatDuration(log.durationSeconds)}
                         </span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px]">
-                          Volume
+                      <div className="flex flex-col min-w-0 border-x border-border/40 px-2 sm:px-3">
+                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px] flex items-center gap-1 truncate">
+                          <Dumbbell size={11} className="shrink-0 text-primary" />
+                          <span>Volume</span>
                         </span>
-                        <span className="font-semibold text-sm">
-                          {volume.toLocaleString()} {preferredUnit}
+                        <span className="font-semibold text-xs sm:text-sm truncate mt-0.5">
+                          {volume.toLocaleString()} <span className="text-[10px] font-normal opacity-70">{preferredUnit}</span>
                         </span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px]">
-                          Sets
+                      <div className="flex flex-col min-w-0 pl-1">
+                        <span className="opacity-50 font-medium uppercase tracking-wider text-[10px] flex items-center gap-1 truncate">
+                          <Layers size={11} className="shrink-0 text-primary" />
+                          <span>Sets</span>
                         </span>
-                        <span className="font-semibold text-sm">
-                          {setsCount} sets ({log.exercises?.length || 0} ex)
+                        <span className="font-semibold text-xs sm:text-sm truncate mt-0.5">
+                          {setsCount} <span className="text-[10px] font-normal opacity-70 font-sans">({log.exercises?.length || 0} ex)</span>
                         </span>
                       </div>
                     </div>
@@ -296,7 +300,7 @@ export default function HistoryPage() {
                       onClick={() =>
                         setExpandedLogId(isExpanded ? null : log.id)
                       }
-                      className="w-full flex items-center justify-between text-xs font-medium opacity-70 hover:opacity-100 pt-1"
+                      className="w-full flex items-center justify-between text-xs font-medium opacity-70 hover:opacity-100 pt-1 transition-opacity"
                     >
                       <span>
                         {isExpanded
@@ -307,28 +311,28 @@ export default function HistoryPage() {
                     </button>
 
                     {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-border/50 space-y-4 animate-in fade-in duration-200">
+                      <div className="mt-4 pt-4 border-t border-border/50 space-y-3 animate-in fade-in duration-200">
                         {log.exercises?.map((item: any) => (
                           <div
                             key={item.id}
-                            className="bg-background/60 p-3.5 rounded-xl border border-border/60"
+                            className="bg-background/60 p-3 sm:p-3.5 rounded-xl border border-border/60"
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-sm">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <h4 className="font-medium text-sm min-w-0 flex-1 truncate">
                                 {item.exercise.name}
                               </h4>
-                              <span className="text-[10px] uppercase font-semibold opacity-60 bg-border/40 px-2 py-0.5 rounded">
+                              <span className="text-[10px] uppercase font-semibold opacity-60 bg-border/40 px-2 py-0.5 rounded shrink-0">
                                 {item.exercise.primaryMuscle}
                               </span>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 text-xs">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs">
                               {item.sets
                                 ?.filter((s: any) => s.isCompleted)
                                 .map((s: any, sIdx: number) => (
                                   <span
                                     key={s.id}
-                                    className="px-2 py-1 bg-surface border border-border rounded-md font-mono text-[11px]"
+                                    className="px-2 py-1 bg-surface border border-border rounded-md font-mono text-[11px] shadow-2xs"
                                   >
                                     Set {sIdx + 1}:{" "}
                                     <strong>
@@ -357,7 +361,7 @@ export default function HistoryPage() {
           <div className="relative mb-6">
             <Search
               size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40"
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none"
             />
             <input
               type="text"
@@ -391,24 +395,24 @@ export default function HistoryPage() {
               {filteredPrs?.map((pr) => (
                 <div
                   key={pr.exerciseName}
-                  className="p-5 bg-surface border border-border rounded-2xl flex items-center justify-between shadow-sm hover:border-primary/40 transition-all group"
+                  className="p-4 sm:p-5 bg-surface border border-border rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all group"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 bg-tag-yellow-bg text-tag-yellow-text border border-tag-yellow-text/20 rounded-2xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-                      <Trophy size={22} />
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-11 h-11 bg-tag-yellow-bg text-tag-yellow-text border border-tag-yellow-text/20 rounded-xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+                      <Trophy size={20} />
                     </div>
-                    <div>
-                      <h3 className="font-medium text-sm sm:text-base line-clamp-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-medium text-sm sm:text-base truncate">
                         {pr.exerciseName}
                       </h3>
-                      <span className="text-xs opacity-50 font-medium uppercase tracking-wider">
+                      <span className="text-[10px] sm:text-xs opacity-50 font-medium uppercase tracking-wider block truncate">
                         All-Time Best
                       </span>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <span className="text-xl font-bold font-mono tracking-tight text-primary">
+                  <div className="text-right shrink-0">
+                    <span className="text-lg sm:text-xl font-bold font-mono tracking-tight text-primary">
                       {pr.maxWeight}
                     </span>
                     <span className="text-xs font-semibold opacity-60 ml-1">
