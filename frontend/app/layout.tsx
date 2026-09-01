@@ -8,6 +8,7 @@ import { SideNav } from "../components/layout/SideNav";
 import { AuthGuard } from "../components/auth/AuthGuard";
 import { SyncStatusBadge } from "../components/ui/SyncStatusBadge";
 import { InstallPwaBanner } from "../components/ui/InstallPwaBanner";
+import { InstallInstructionsModal } from "../components/ui/InstallInstructionsModal";
 import { RestTimer } from "../components/workout/RestTimer";
 import { ServiceWorkerRegister } from "../components/providers/ServiceWorkerRegister";
 
@@ -62,6 +63,7 @@ export default function RootLayout({
             <AuthGuard>
               <SyncStatusBadge />
               <InstallPwaBanner />
+              <InstallInstructionsModal />
               <SideNav />
               <main className="flex-1 flex flex-col pb-20 md:pb-0 w-full min-w-0 min-h-dvh">
                 {children}

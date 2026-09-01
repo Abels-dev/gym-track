@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LogOut, User, Target, Settings, Activity, Palette } from "lucide-react";
+import { LogOut, User, Target, Settings, Activity, Palette, Smartphone, CheckCircle2, Download } from "lucide-react";
 import Link from "next/link";
 import { apiClient } from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
+import { usePwaStore } from "../../store/pwaStore";
 import { useRouter } from "next/navigation";
 import { PageLoader } from "../../components/ui/Loader";
 import { ThemeToggle } from "../../components/ui/ThemeToggle";
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const authUser = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const { isStandalone, promptInstall } = usePwaStore();
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -112,7 +114,7 @@ export default function ProfilePage() {
       </section>
 
       {/* Theme / Appearance Section */}
-      <section className="mb-8 p-4 bg-surface border border-border rounded-xl flex items-center justify-between">
+      <section className="mb-4 p-4 bg-surface border border-border rounded-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Palette size={20} className="opacity-70" />
           <div>
@@ -121,6 +123,37 @@ export default function ProfilePage() {
           </div>
         </div>
         <ThemeToggle />
+      </section>
+
+      {/* App Installation Section */}
+      <section className="mb-8 p-4 bg-surface border border-border rounded-xl flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
+            <Smartphone size={20} />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium">Install App</h3>
+            <p className="text-xs opacity-60 mt-0.5">
+              {isStandalone
+                ? "App is installed and ready for offline use"
+                : "Add Gym Track to home screen for offline access"}
+            </p>
+          </div>
+        </div>
+        {isStandalone ? (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-tag-green-text bg-tag-green-bg px-3 py-1.5 rounded-lg border border-tag-green-text/20 shrink-0">
+            <CheckCircle2 size={14} />
+            Installed
+          </span>
+        ) : (
+          <button
+            onClick={() => promptInstall()}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity shrink-0 cursor-pointer shadow-sm"
+          >
+            <Download size={14} />
+            Install
+          </button>
+        )}
       </section>
 
       {/* Action Buttons */}

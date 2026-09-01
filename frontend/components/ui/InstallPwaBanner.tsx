@@ -1,46 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Download, X, Smartphone } from "lucide-react";
+import { useEffect } from "react";
+import { X, Smartphone } from "lucide-react";
+import { usePwaStore } from "../../store/pwaStore";
 
 export function InstallPwaBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const {
+    deferredPrompt,
+    isBannerDismissed,
+    isStandalone,
+    initPwa,
+    dismissBanner,
+    promptInstall,
+  } = usePwaStore();
 
   useEffect(() => {
-    // Check if dismissed previously
-    const dismissed = localStorage.getItem("gym_track_pwa_dismissed");
-    if (dismissed) {
-      setIsDismissed(true);
-    }
+    initPwa();
+  }, [initPwa]);
 
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setDeferredPrompt(null);
-    }
-  };
-
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    localStorage.setItem("gym_track_pwa_dismissed", "true");
-  };
-
-  if (!deferredPrompt || isDismissed) {
+  // Don't show if dismissed within 7 days, already installed, or browser doesn't offer prompt
+  if (!deferredPrompt || isBannerDismissed || isStandalone) {
     return null;
   }
 
@@ -63,14 +42,14 @@ export function InstallPwaBanner() {
 
         <div className="flex items-center gap-1.5 shrink-0">
           <button
-            onClick={handleInstallClick}
+            onClick={() => promptInstall()}
             className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity"
           >
             Install
           </button>
           <button
-            onClick={handleDismiss}
-            title="Dismiss banner"
+            onClick={dismissBanner}
+            title="Dismiss banner for 7 days"
             className="p-1.5 text-foreground/40 hover:text-foreground rounded-lg transition-colors"
           >
             <X size={15} />
